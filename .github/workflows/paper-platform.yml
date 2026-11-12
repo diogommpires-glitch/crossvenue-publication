@@ -1,0 +1,43 @@
+name: Paper platform verification
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  offline:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: requirements-paper.lock
+      - name: Install locked environment
+        run: python -m pip install --require-hashes -r requirements-paper.lock
+      - name: Publication privacy audit
+        run: python tools/release_audit.py --root .
+      - name: Install local package
+        env:
+          SETUPTOOLS_USE_DISTUTILS: stdlib
+        run: python -m pip install --no-deps --no-build-isolation -e .
+      - name: Generate synthetic recording from source
+        run: python -c "from src.runtime.replay_fixtures import create_representative_fixture; create_representative_fixture('tests/fixtures/representative_recording', 'config/cross_asset_paper.example.json')"
+      - name: Offline regression suite
+        run: python -m pytest -q -m "not browser and not live and not performance" --deselect=tests/test_replay_soak.py::test_standalone_soak_cli_explicitly_labels_historical_re_evaluation
+      - name: Install pinned syntax checker
+        run: python -m pip install --no-deps ruff==0.14.0
+      - name: Python syntax and undefined-name gate
+        run: python -m ruff check --select E9,F63,F7,F82 src tests launch.py
+      - name: Installed CLI and configuration smoke test
+        run: python -m src.runtime.paper_cli doctor
+      - name: Install browser test runtime
+        if: runner.os == 'Windows'
+        run: python -m playwright install chromium
+      - name: Browser acceptance with local fixtures
+        if: runner.os == 'Windows'
+        run: python -m pytest -q -m browser

@@ -1,0 +1,34 @@
+{
+  "version": "2.0.0",
+  "mode": "paper",
+  "description": "Public Binance market data with local simulated execution; no credentials required",
+  "exchange": {
+    "name": "binance",
+    "market_data": "public",
+    "testnet": false
+  },
+  "trading": {
+    "symbol": "BTCUSDT",
+    "base_currency": "BTC",
+    "quote_currency": "USDT"
+  },
+  "strategy": {
+    "type": "avellaneda_stoikov",
+    "risk_aversion": 0.05,
+    "order_size": 0.01,
+    "inventory_target": 0.0,
+    "order_refresh_seconds": 5.0
+  },
+  "risk": {
+    "max_position_base": 0.1,
+    "max_order_base": 0.01,
+    "max_daily_loss_quote": 1000.0,
+    "reserve_quote_pct": 0.05,
+    "allow_short": false
+  },
+  "execution": {
+    "mode": "paper",
+    "paper_queue_fraction": 0.5,
+    "cancel_quotes_on_stale_data": true
+  }
+}

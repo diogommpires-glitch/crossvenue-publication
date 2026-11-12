@@ -1,0 +1,225 @@
+{
+  "mode": "paper",
+  "execution_mode": "local_paper",
+  "account_id": "cross_asset_paper",
+  "state_db_path": "data/trading_state.db",
+  "starting_capital": 50000.0,
+  "reporting_currency": "USD",
+  "starting_balances": {
+    "USD": 40000.0,
+    "USDT": 10000.0
+  },
+  "conversion_marks": {
+    "USDT": {
+      "rate_to_reporting": 1.0,
+      "source": "explicit_manual_stablecoin_peg_assumption_not_live_market_data",
+      "max_age_seconds": 86400
+    }
+  },
+  "max_mark_age_seconds": 30,
+  "market_data_stale_after": 10,
+  "max_clock_skew_seconds": 3,
+  "risk": {
+    "max_daily_loss": 500.0,
+    "max_gross_exposure": 1000000.0,
+    "max_orders_per_minute": 120
+  },
+  "providers": [
+    {
+      "provider_id": "binance_public",
+      "type": "binance",
+      "instrument_ids": ["BINANCE:BTCUSDT"]
+    },
+    {
+      "provider_id": "databento_equities",
+      "type": "databento",
+      "dataset": "XNAS.ITCH",
+      "stype_in": "raw_symbol",
+      "schemas": ["definition", "mbp-1", "trades", "status"],
+      "instrument_ids": ["NASDAQ:AAPL"]
+    },
+    {
+      "provider_id": "oanda_fx",
+      "type": "oanda",
+      "environment": "live",
+      "account_id_env": "OANDA_ACCOUNT_ID",
+      "instrument_ids": ["OANDA:EUR_USD"]
+    },
+    {
+      "provider_id": "databento_cme",
+      "type": "databento",
+      "dataset": "GLBX.MDP3",
+      "stype_in": "raw_symbol",
+      "schemas": ["definition", "mbp-1", "trades", "status"],
+      "instrument_ids": ["CME:ESZ6"]
+    }
+  ],
+  "instruments": [
+    {
+      "provider_id": "binance_public",
+      "provider_symbol": "BTCUSDT",
+      "fill_model": "trade_print_queue",
+      "queue_fraction": 0.25,
+      "maker_latency_ms": 100,
+      "instrument": {
+        "instrument_id": "BINANCE:BTCUSDT",
+        "asset_class": "crypto",
+        "symbol": "BTC/USDT",
+        "venue": "BINANCE",
+        "base_currency": "BTC",
+        "quote_currency": "USDT",
+        "settlement_currency": "USDT",
+        "quantity_unit": "BTC",
+        "tick_size": 0.01,
+        "quantity_step": 0.00001,
+        "min_quantity": 0.00001,
+        "contract_multiplier": 1.0,
+        "session_timezone": "UTC"
+      },
+      "strategy": {
+        "order_size": 0.001,
+        "spread_bps": 8,
+        "inventory_skew_bps": 8
+      },
+      "risk": {
+        "max_order_quantity": 0.005,
+        "max_position_quantity": 0.02,
+        "max_notional": 1000,
+        "allow_short": false
+      },
+      "fees": {
+        "maker_rate": 0.0002,
+        "taker_rate": 0.0004,
+        "maker_per_unit": 0,
+        "taker_per_unit": 0,
+        "currency": "USDT"
+      }
+    },
+    {
+      "provider_id": "databento_equities",
+      "provider_symbol": "AAPL",
+      "fill_model": "trade_print_queue",
+      "queue_fraction": 0.1,
+      "maker_latency_ms": 250,
+      "instrument": {
+        "instrument_id": "NASDAQ:AAPL",
+        "asset_class": "equity",
+        "symbol": "AAPL",
+        "venue": "NASDAQ",
+        "base_currency": "AAPL",
+        "quote_currency": "USD",
+        "settlement_currency": "USD",
+        "quantity_unit": "shares",
+        "tick_size": 0.01,
+        "quantity_step": 1,
+        "min_quantity": 1,
+        "contract_multiplier": 1.0,
+        "session_timezone": "America/New_York"
+      },
+      "strategy": {
+        "order_size": 1,
+        "spread_bps": 8,
+        "inventory_skew_bps": 8
+      },
+      "risk": {
+        "max_order_quantity": 5,
+        "max_position_quantity": 20,
+        "max_notional": 10000,
+        "allow_short": false
+      },
+      "fees": {
+        "maker_rate": 0.0005,
+        "taker_rate": 0.001,
+        "maker_per_unit": 0,
+        "taker_per_unit": 0,
+        "currency": "USD"
+      }
+    },
+    {
+      "provider_id": "oanda_fx",
+      "provider_symbol": "EUR_USD",
+      "fill_model": "fx_quote_cross",
+      "queue_fraction": 0.1,
+      "maker_latency_ms": 500,
+      "instrument": {
+        "instrument_id": "OANDA:EUR_USD",
+        "asset_class": "fx",
+        "symbol": "EUR/USD",
+        "venue": "OANDA",
+        "base_currency": "EUR",
+        "quote_currency": "USD",
+        "settlement_currency": "USD",
+        "quantity_unit": "EUR",
+        "tick_size": 0.00001,
+        "quantity_step": 1000,
+        "min_quantity": 1000,
+        "contract_multiplier": 1.0,
+        "session_timezone": "UTC",
+        "fx_accounting_mode": "rolling",
+        "initial_margin_rate": 0.05,
+        "maintenance_margin_rate": 0.025
+      },
+      "strategy": {
+        "order_size": 1000,
+        "spread_bps": 8,
+        "inventory_skew_bps": 8
+      },
+      "risk": {
+        "max_order_quantity": 1000,
+        "max_position_quantity": 10000,
+        "max_notional": 15000,
+        "allow_short": false
+      },
+      "fees": {
+        "maker_rate": 0.0001,
+        "taker_rate": 0.0002,
+        "maker_per_unit": 0,
+        "taker_per_unit": 0,
+        "currency": "USD"
+      }
+    },
+    {
+      "provider_id": "databento_cme",
+      "provider_symbol": "ESZ6",
+      "fill_model": "trade_print_queue",
+      "queue_fraction": 0.05,
+      "maker_latency_ms": 250,
+      "instrument": {
+        "instrument_id": "CME:ESZ6",
+        "asset_class": "future",
+        "symbol": "ESZ6",
+        "venue": "CME",
+        "base_currency": "ES",
+        "quote_currency": "USD",
+        "settlement_currency": "USD",
+        "quantity_unit": "contracts",
+        "tick_size": 0.25,
+        "quantity_step": 1,
+        "min_quantity": 1,
+        "contract_multiplier": 50,
+        "session_timezone": "America/Chicago",
+        "expiry": "2026-12-18T14:30:00Z",
+        "initial_margin_per_contract": 20000,
+        "maintenance_margin_per_contract": 18000
+      },
+      "strategy": {
+        "order_size": 1,
+        "spread_bps": 4,
+        "inventory_skew_bps": 4
+      },
+      "risk": {
+        "max_order_quantity": 1,
+        "max_position_quantity": 1,
+        "max_notional": 500000,
+        "allow_short": true
+      },
+      "fees": {
+        "maker_rate": 0,
+        "taker_rate": 0,
+        "maker_per_unit": 1.25,
+        "taker_per_unit": 1.25,
+        "currency": "USD"
+      }
+    }
+  ]
+}

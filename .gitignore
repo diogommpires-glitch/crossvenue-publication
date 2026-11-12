@@ -1,0 +1,67 @@
+# Python and build output
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.coverage*
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Local environments and tools
+venv/
+.venv*/
+.python/
+.tools/
+.uv-cache/
+.tmp/
+work/
+
+# Credentials and private configuration
+.env
+*.clixml
+.hallmark/
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+credentials*
+secrets*
+config/*.json
+!config/*.example.json
+!config/risk_limits.json
+!config/trading_config.json.example
+
+# Private paper accounts, recordings, reports, and generated dashboards
+data/
+logs/
+results/
+recordings/
+delivery_evidence/
+context/
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+*.writer.lock
+*.log
+/trading_terminal.html
+
+# Editor and platform metadata
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+.refine/
+AGENTS.md
+CLAUDE.md
+PUBLIC_RELEASE_AUDIT.json
+RELEASE_MANIFEST.json
+
+# Regenerate the synthetic replay fixture from source for local tests.
+/tests/fixtures/representative_recording/

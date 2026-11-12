@@ -1,0 +1,36 @@
+:root {
+  color-scheme: dark;
+  --space-3xs: 2px; --space-2xs: 4px; --space-xs: 8px; --space-sm: 12px; --space-md: 16px; --space-lg: 24px; --space-xl: 40px; --space-2xl: 64px; --space-3xl: 96px; --space-4xl: 144px;
+  --text-xs: 0.75rem; --text-sm: 0.875rem; --text-md: 1rem; --text-lg: 1.2rem; --text-xl: 1.44rem; --text-2xl: 1.728rem; --text-3xl: 2.074rem;
+  --text-display-s: 1.44rem; --text-display: 1.728rem; --text-section: 1.2rem; --text-title: 1rem; --text-lead: 1rem;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1); --ease-in: cubic-bezier(0.7, 0, 0.84, 0); --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-micro: 120ms; --dur-short: 220ms; --dur-long: 420ms;
+  --color-error: oklch(72% 0.15 27); --color-success: oklch(76% 0.13 150);
+  --container: 1440px; --gutter: 32px; --gap-columns: 32px; --section-gap-s: 120px; --section-gap: 144px; --section-gap-l: 176px;
+  --z-base: 1; --z-raised: 10; --z-dropdown: 100; --z-sticky: 200; --z-sticky-nav: 300; --z-modal: 400; --z-toast: 500; --z-tooltip: 600;
+  --color-paper: oklch(17% 0.008 250); --color-paper-2: oklch(21% 0.009 250); --color-paper-3: oklch(13.5% 0.007 250);
+  --color-ink: oklch(95% 0.005 250); --color-ink-2: oklch(83% 0.008 250); --color-muted: oklch(71% 0.01 250);
+  --color-rule: oklch(31% 0.01 250); --color-rule-2: oklch(42% 0.012 250);
+  --color-field-rule: oklch(58% 0.01 250);
+  --color-accent: oklch(82% 0.15 80); --color-accent-ink: oklch(18% 0.04 75); --color-accent-soft: oklch(29% 0.05 80); --color-focus: oklch(82% 0.15 80);
+  --color-cool: oklch(77% 0.12 245); --color-cool-soft: oklch(29% 0.05 245);
+  --color-ok: oklch(76% 0.15 150); --color-ok-soft: oklch(24.5% 0.03 150); --color-bad: oklch(70% 0.17 25); --color-bad-soft: oklch(24.5% 0.035 25);
+  --font-display: "Segoe UI", ui-sans-serif, system-ui, sans-serif; --font-body: var(--font-display);
+  --font-outlier: "Cascadia Mono", "Consolas", ui-monospace, monospace;
+  --radius-card: 10px; --radius-pill: 6px; --rule-hair: 1px;
+  --shadow-card: none;
+  --tracking-display: -0.03em; --display-weight: 500;
+
+  --bg-primary: var(--color-paper); --bg-secondary: var(--color-paper-2);
+  --bg-elevated: var(--color-paper-3); --bg-card: var(--color-paper-2);
+  --text-primary: var(--color-ink); --text-secondary: var(--color-ink-2); --text-tertiary: var(--color-muted);
+  --accent-green: var(--color-accent); --accent-green-hover: var(--color-accent-soft);
+  --positive: var(--color-ok); --negative: var(--color-bad); --warning: var(--color-accent); --info: var(--color-cool);
+  --border-subtle: var(--color-rule); --border-medium: var(--color-rule-2);
+  --spacing-xs: var(--space-xs); --spacing-sm: var(--space-sm); --spacing-md: var(--space-md);
+  --spacing-lg: var(--space-lg); --spacing-xl: var(--space-xl);
+  --chart-text: #c8ccd1; --chart-muted: #a4adb9; --chart-grid: #30363e;
+  --chart-positive: #74cfa2; --chart-negative: #ed8d81; --chart-warning: #e7bd66; --chart-info: #90bddb;
+  --chart-positiveFill: rgba(116, 207, 162, 0.08);
+  --chart-warningFill: rgba(231, 189, 102, 0.08); --chart-infoFill: rgba(144, 189, 219, 0.08);
+}

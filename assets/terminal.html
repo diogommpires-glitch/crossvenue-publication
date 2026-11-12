@@ -1,0 +1,2291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="CrossVenue local paper trading workbench: markets, quotes, account history, and simulated execution.">
+    <title>CrossVenue Paper Trading Terminal</title>
+
+    <!-- Chart.js for visualizations -->
+    <script src="assets/chart.umd.min.js"></script>
+
+    <link rel="stylesheet" href="terminal.css">
+</head>
+<body>
+    <a class="skip-link" href="#mainWorkspace">Skip to workspace</a>
+      <div class="safety-banner"><strong>PAPER ONLY</strong> Configured public market data. All execution is simulated locally. No exchange orders are sent.</div>
+    <header class="workbench-header">
+      <div class="shell command-bar">
+        <div class="brand-block"><h1>CrossVenue</h1><span class="paper-mode">Paper only</span><div class="connection-status"><span class="status-dot" id="statusDot" aria-hidden="true"></span><span id="statusText">Connecting to local paper backend</span></div></div>
+        <div class="portfolio-controls"><div class="control-scope">Portfolio controls <span class="status-indicator-control">
+                <span class="status-dot-control stopped" id="strategyStatusDot"></span>
+                <span id="strategyStatusText">Stopped</span>
+            </span></div><div class="control-buttons">
+          <button class="control-button start" id="startButton" aria-label="Start paper strategy" disabled><span class="control-icon" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M4 2 14 8 4 14Z"/></svg></span><span>Start</span></button><button class="control-button stop" id="stopButton" aria-label="Stop paper strategy" disabled><span class="control-icon" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3 3H13V13H3Z"/></svg></span><span>Stop</span></button><button class="control-button stop global-stop" id="globalStopButton" aria-label="Stop all paper quotes" disabled><span class="control-icon" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3 3H13V13H3Z"/></svg></span><span>Stop all</span></button>
+        </div></div>
+      </div>
+    </header>
+      <div class="shell command-feedback"><div id="controlMessage" role="status" style="margin-top:10px;color:var(--text-secondary);">Controls affect the local paper account only.</div><button class="text-button" type="button" data-view="activity">View activity</button></div>
+      <nav class="shell view-nav" aria-label="Workspace views">
+        <a href="#trading" data-view="trading" aria-current="page">Trading</a><a href="#portfolio" data-view="portfolio">Portfolio</a><a href="#activity" data-view="activity">Activity</a><a href="#system" data-view="system">System</a>
+      </nav>
+    <main class="shell workspace" id="mainWorkspace" tabindex="-1">
+      <section class="portfolio-strip" aria-label="Portfolio summary">
+        <div><span>Portfolio equity</span><strong id="summaryEquity">Unavailable</strong></div>
+        <div><span>Net P&amp;L</span><strong id="summaryPnl">Unavailable</strong></div>
+        <div><span>Working paper orders</span><strong id="summaryOrders">0</strong></div>
+        <div><span>Feeds ready</span><strong id="summaryFeeds">Waiting</strong></div>
+      </section>
+      <div class="trading-quick-links" aria-label="Trading shortcuts"><button class="control-button" id="ordersQuickButton" type="button">Working orders</button><button class="control-button" id="fillsQuickButton" type="button">Paper fills</button></div>
+      <section id="view-trading" data-view-panel="trading" aria-label="Trading workspace">
+        <div class="trading-layout">
+          <details id="watchlistPanel" class="watchlist" open>
+            <summary><span>Markets</span><span id="watchlistCount">Waiting</span></summary>
+            <div class="watchlist-content">
+              <label class="visually-hidden" for="instrumentSearch">Search instruments</label><input id="instrumentSearch" type="search" placeholder="Search symbol or venue" autocomplete="off">
+              <label class="visually-hidden" for="assetFilter">Market class</label><select id="assetFilter"><option value="all">All markets</option><option value="crypto">Crypto</option><option value="equity">Stocks</option><option value="fx">FX</option><option value="future">Futures</option></select>
+              <section class="cross-asset-panel" id="multiAssetPanel" hidden aria-labelledby="multiAssetTitle">
+                <h2 id="multiAssetTitle" class="visually-hidden">Markets / Crypto, Stocks, FX &amp; Futures</h2>
+                <p id="marketSelectorHint" class="watchlist-hint">Select a market. Instruments awaiting access remain visible.</p><div class="instrument-grid" id="instrumentGrid"></div>
+              </section>
+              <p class="watchlist-hint" id="multiAssetSummary">Waiting for configured market feeds</p>
+            </div>
+          </details>
+          <div class="instrument-workspace">
+            <section class="selected-instrument" aria-labelledby="selectedInstrumentTitle">
+              <div class="instrument-heading"><div><h2 id="selectedInstrumentTitle" tabindex="-1">BTC/USDT</h2><p id="selectedInstrumentMeta">Selected instrument / local simulated execution</p></div><button class="control-button" id="rollFutureButton" type="button" style="display:none;">Roll selected contract</button></div>
+              <div class="market-readout"><div class="quote-reading"><span id="midPriceLabel">BTC/USDT mid</span><strong id="midPrice">Unavailable</strong></div><div class="quote-reading"><span>Spread</span><strong id="marketSpread">Unavailable</strong></div></div>
+              <p id="selectedReadiness" class="readiness-summary">Waiting for market data.</p>
+              <details class="readiness-details"><summary>Quote readiness</summary><div id="readinessDetails">The local backend will report feed, session, accounting, and risk readiness.</div><p id="feedStatus">Waiting for fresh Binance depth and trade feeds</p><p id="streamStatus" role="status">Depth stream: waiting. Trade stream: waiting.</p></details>
+            </section>
+            <details class="controls-panel" id="controlsPanel">
+        <summary class="controls-header" id="controlsPanelToggle">
+            <span class="controls-title">Strategy controls</span>
+            <span class="controls-toggle-hint">Selected instrument parameters</span>
+            
+        </summary>
+
+        <div class="controls-content">
+        
+        
+
+        <details class="strategy-variables" id="strategyVariables">
+            <summary>Strategy variables</summary>
+            <div class="strategy-variables-content">
+              <div id="legacyStrategyVariables">
+                <div class="param-control">
+                    <div class="param-label">
+                        <span>Risk Aversion</span>
+                        <span class="param-value" id="riskAversionValue">0.05</span>
+                    </div>
+                    <div class="variable-inputs"><input type="range" class="param-slider" id="riskAversionSlider" aria-label="Risk aversion"
+                           min="0.01" max="0.20" step="0.01" value="0.05"><input type="number" id="riskAversionInput" aria-label="Risk aversion" min="0.01" max="0.20" step="0.01" value="0.05"></div>
+                </div>
+
+                <div class="param-control">
+                    <div class="param-label">
+                        <span>Order Size (BTC)</span>
+                        <span class="param-value" id="orderSizeValue">0.010</span>
+                    </div>
+                    <div class="variable-inputs"><input type="range" class="param-slider" id="orderSizeSlider" aria-label="Order size in BTC"
+                           min="0.001" max="0.05" step="0.001" value="0.01"><input type="number" id="orderSizeInput" aria-label="Order size in BTC" min="0.001" max="0.05" step="0.001" value="0.01"></div>
+                </div>
+
+                <div class="param-control">
+                    <div class="param-label">
+                        <span>Update Interval (s)</span>
+                        <span class="param-value" id="intervalValue">5</span>
+                    </div>
+                    <div class="variable-inputs"><input type="range" class="param-slider" id="intervalSlider" aria-label="Update interval in seconds"
+                           min="1" max="10" step="1" value="5"><input type="number" id="intervalInput" aria-label="Update interval in seconds" min="1" max="10" step="1" value="5"></div>
+                </div>
+              </div>
+              <div id="crossAssetVariables" class="cross-asset-variables">
+                <div class="param-label" id="strategyInstrumentLabel" style="color:var(--text-tertiary);font-size:12px;">Applies to selected instrument</div>
+                <div class="param-control">
+                    <div class="param-label"><span>Target spread (bps)</span><span class="param-value" id="spreadBpsValue">8</span></div>
+                    <div class="variable-inputs"><input type="range" class="param-slider" id="spreadBpsSlider" aria-label="Target spread in basis points" min="1" max="50" step="1" value="8"><input type="number" id="spreadBpsInput" aria-label="Target spread in basis points" min="1" max="50" step="1" value="8"></div>
+                </div>
+                <div class="param-control">
+                    <div class="param-label"><span>Inventory skew (bps)</span><span class="param-value" id="inventorySkewValue">8</span></div>
+                    <div class="variable-inputs"><input type="range" class="param-slider" id="inventorySkewSlider" aria-label="Inventory skew in basis points" min="0" max="50" step="1" value="8"><input type="number" id="inventorySkewInput" aria-label="Inventory skew in basis points" min="0" max="50" step="1" value="8"></div>
+                </div>
+                <div class="param-label" style="color:var(--text-tertiary);font-size:12px;">Order sizes and position limits remain configured separately for each instrument.</div>
+              </div>
+            </div>
+        </details>
+<div class="variables-actions"><button class="control-button" id="applyVariablesButton" type="button" disabled>Apply variables</button><span id="variablesMessage" role="status">No pending changes.</span></div>
+        </div>
+    </details>
+            <div class="panel-grid-2 market-activity-grid"><section class="chart-container" aria-labelledby="liveBookTitle">
+                <div class="chart-header">
+                    <h2 class="chart-title" id="liveBookTitle">Selected instrument quotes</h2>
+                    <div class="market-activity-meta" id="bookUpdateStatus" aria-live="polite">Waiting for depth</div>
+                </div>
+                <p class="table-scroll-hint">Scroll horizontally for remaining columns.</p><div class="scrollable-content" tabindex="0" role="region" aria-label="Scrollable trading data">
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>Level</th><th>Bid</th><th>Bid size</th><th>Ask</th><th>Ask size</th></tr>
+                        </thead>
+                        <tbody id="orderBookBody">
+                            <tr><td colspan="5" style="text-align:center;color:var(--text-tertiary);padding:var(--spacing-md);">Waiting for live Binance depth</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section><div class="chart-container">
+                <div class="chart-header">
+                    <h2 class="chart-title">Working paper orders</h2>
+                    <div style="font-size: 13px; color: var(--text-secondary);">
+                        <span id="activeOrderCount">0</span> active
+                    </div>
+                </div>
+<div class="scope-control"><label for="ordersScope">Show orders</label><select id="ordersScope"><option value="selected">Selected instrument</option><option value="all">All instruments</option></select></div>
+                <p class="table-scroll-hint">Scroll horizontally for remaining columns.</p><div class="scrollable-content" tabindex="0" role="region" aria-label="Scrollable trading data">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Instrument</th>
+                                <th>Side</th>
+                                <th>Price</th>
+                                <th>Size</th>
+                                <th>Age</th>
+                            </tr>
+                        </thead>
+                        <tbody id="activeOrdersBody">
+                            <tr>
+                                <td colspan="5" style="text-align: center; color: var(--text-tertiary); padding: var(--spacing-md);">
+                                    No active orders
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div></div>
+            <nav class="trading-tabs" aria-label="Selected instrument details"><button type="button" class="text-button" data-trading-tab="prints" aria-selected="true">Public prints</button><button type="button" class="text-button" data-trading-tab="fills" aria-selected="false">Paper fills</button><button type="button" class="text-button" data-trading-tab="position" aria-selected="false">Position history</button></nav>
+            <section data-trading-panel="prints" aria-label="Public prints"><section class="chart-container" aria-labelledby="publicTapeTitle">
+                <div class="chart-header">
+                    <h2 class="chart-title" id="publicTapeTitle">Selected instrument public prints</h2>
+                    <div class="market-activity-meta"><span id="marketPrintCount">0</span> retained public prints / not paper fills</div>
+                </div>
+                <p class="table-scroll-hint">Scroll horizontally for remaining columns.</p><div class="scrollable-content" tabindex="0" role="region" aria-label="Scrollable trading data">
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>Time</th><th>Aggressor</th><th>Price</th><th id="marketTapeSizeHeader">Size (BTC)</th></tr>
+                        </thead>
+                        <tbody id="marketTapeBody">
+                            <tr><td colspan="4" style="text-align:center;color:var(--text-tertiary);padding:var(--spacing-md);">Waiting for Binance market prints</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section></section>
+            <section data-trading-panel="fills" aria-label="Paper fills" hidden><div class="chart-container">
+                <div class="chart-header">
+                    <h2 class="chart-title">Recent paper fills</h2>
+                    <div style="font-size: 13px; color: var(--text-secondary);">
+                        Rejections: <span id="rejectionCount" style="color: var(--negative);">0</span>
+                    </div>
+                </div>
+<div class="scope-control"><label for="fillsScope">Show fills</label><select id="fillsScope"><option value="selected">Selected instrument</option><option value="all">All instruments</option></select></div>
+                <p class="table-scroll-hint">Scroll horizontally for remaining columns.</p><div class="scrollable-content" tabindex="0" role="region" aria-label="Scrollable trading data">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Instrument</th>
+                                <th>Side</th>
+                                <th>Price</th>
+                                <th>Size</th>
+                                <th>Fill model</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fillHistoryBody">
+                            <tr>
+                                <td colspan="6" style="text-align: center; color: var(--text-tertiary); padding: var(--spacing-md);">
+                                    No fills yet
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div></section>
+            <section data-trading-panel="position" aria-label="Position history" hidden><div class="chart-container">
+            <div class="chart-header">
+                    <h2 class="chart-title">Selected instrument position history</h2>
+                <div style="font-size: 14px; color: var(--text-secondary);">
+                    Current: <span id="currentPosition" style="font-weight: 600;">0</span>
+                </div>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="positionChart" role="img" aria-label="Selected instrument paper position over time"></canvas>
+            </div>
+        </div></section>
+          </div>
+        </div>
+      </section>
+      <section id="view-portfolio" data-view-panel="portfolio" aria-labelledby="portfolioTitle" hidden>
+        <div class="view-heading"><div><h2 id="portfolioTitle">Portfolio</h2><p id="portfolioSummary">Waiting for authoritative account valuation.</p></div></div>
+        <div class="metrics-grid">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Total P&L (<span id="reportingCurrencyLabel">USD</span>)</div>
+                </div>
+                <div class="card-value positive" id="totalPnl">Unavailable</div>
+                <div class="card-change positive" id="pnlChange">+$0.00 (0.00%)</div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Paper Traded Notional</div>
+                </div>
+                <div class="card-value" id="dailyVolume">Unavailable</div>
+                <div class="card-change" id="volumeChange">0 fill events</div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Sharpe Ratio</div>
+                </div>
+                <div class="card-value" id="sharpeRatio">Unavailable</div>
+                <div class="card-change" id="sharpeChange">Waiting for return observations</div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Max Drawdown</div>
+                </div>
+                <div class="card-value negative" id="maxDrawdown">Unavailable</div>
+                <div class="card-change" id="drawdownChange">From peak</div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Fill Rate</div>
+                </div>
+                <div class="card-value" id="fillRate">Unavailable</div>
+                <div class="card-change" id="fillStats">0/0 filled</div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title" id="slippageMetricLabel">Avg slippage</div>
+                </div>
+                <div class="card-value" id="avgSlippage">Unavailable</div>
+                <div class="card-change" id="slippageChange">bps</div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Fees Paid (<span id="feesCurrencyLabel">USD</span>)</div>
+                </div>
+                <div class="card-value" id="feesPaid">Unavailable</div>
+                <div class="card-change">Included in net P&amp;L</div>
+            </div>
+        </div>
+        <div class="panel-grid-2"><div class="chart-container">
+                <div class="chart-header">
+                    <h2 class="chart-title">Portfolio cumulative P&amp;L</h2>
+                </div>
+                <div class="chart-wrapper small">
+                    <canvas id="cumulativePnlChart" role="img" aria-label="Cumulative local paper account profit and loss"></canvas>
+                </div>
+            </div><div class="chart-container">
+                <div class="chart-header">
+                    <h2 class="chart-title" id="selectedPnlTitle">Selected instrument P&amp;L</h2>
+                </div>
+                <div class="chart-wrapper small">
+                    <canvas id="pnlBreakdownChart" role="img" aria-label="Realized and unrealized paper profit and loss"></canvas>
+                </div>
+                <div style="margin-top: var(--spacing-sm); padding-top: var(--spacing-sm); border-top: 1px solid var(--border-subtle);">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="color: var(--text-secondary); font-size: 13px;">Realized P&L</span>
+                        <span id="realizedPnl" style="font-weight: 600; font-size: 14px;">$0.00</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="color: var(--text-secondary); font-size: 13px;">Unrealized P&L</span>
+                        <span id="unrealizedPnl" style="font-weight: 600; font-size: 14px;">$0.00</span>
+                    </div>
+                </div>
+            </div></div>
+        <section class="chart-container"><div class="chart-header"><h3>Positions</h3><span>Native quantity and P&amp;L units</span></div><p class="table-scroll-hint">Scroll horizontally for remaining columns.</p>
+    <div class="scrollable-content responsive-region" tabindex="0" role="region" aria-label="Portfolio positions"><table class="data-table responsive-table" role="table">
+    <thead><tr><th>Instrument</th><th>Position</th><th>Mark</th><th>Unrealized P&L</th><th>Realized P&L</th><th>Valuation</th><th>State</th></tr></thead>
+    <tbody id="positionsBody"><tr><td colspan="7" class="empty-state">Waiting for positions</td></tr></tbody></table></div></section>
+        <div class="panel-grid-2"><section class="chart-container"><div class="chart-header"><h3>Cash and reservations</h3></div><p class="table-scroll-hint">Scroll horizontally for remaining columns.</p>
+    <div class="scrollable-content responsive-region" tabindex="0" role="region" aria-label="Currency balances and reservations"><table class="data-table responsive-table" role="table">
+    <thead><tr><th>Currency</th><th>Cash</th><th>Available</th><th>Reserved cash</th><th>Reserved margin</th></tr></thead>
+    <tbody id="cashBalancesBody"><tr><td colspan="5" class="empty-state">Waiting for balances</td></tr></tbody></table></div></section><section class="chart-container"><h3>Costs and income</h3><dl class="fact-list" id="portfolioBreakdown"><dt>Account values</dt><dd>Unavailable</dd></dl></section></div>
+        <section class="chart-container"><h3>Exposure and risk</h3><div id="portfolioRiskLimits" class="risk-summary">Waiting for configured risk limits and measured exposures.</div><p class="section-note">Measured position exposure is distinct from worst-case pending-order risk.</p></section>
+        <div class="chart-container">
+            <div class="chart-header">
+                    <h2 class="chart-title">Simulated self-impact analysis</h2>
+            </div>
+            <p id="currentImpact" class="section-note" role="status">Unavailable. Not measured in this runtime.</p>
+            <div class="chart-wrapper small" hidden>
+                <canvas id="impactChart" role="img" aria-label="Simulated market impact in basis points" hidden></canvas>
+            </div>
+        </div>
+      </section>
+      <section id="view-activity" data-view-panel="activity" aria-labelledby="activityTitle" hidden>
+        <div class="view-heading"><div><h2 id="activityTitle">Activity</h2><p>Portfolio history, local command outcomes, and audited accounting actions.</p></div></div>
+        <section class="chart-container"><h3>Persisted account history</h3><div class="history-toolbar"><label for="historyRange">History range</label><select id="historyRange"><option value="3600">Last hour</option><option value="86400">Last day</option><option value="604800">Last week</option><option value="0">All available history (limited)</option></select><button class="control-button" id="loadHistoryButton" type="button">Load history</button></div><p id="historyStatus" role="status">History is saved by the backend.</p></section>
+        <section class="chart-container"><div class="chart-header"><h3>Command outcomes</h3><span>Current browser session</span></div><p class="table-scroll-hint">Scroll horizontally for remaining columns.</p>
+    <div class="scrollable-content responsive-region" tabindex="0" role="region" aria-label="Local command outcomes"><table class="data-table responsive-table" role="table">
+    <thead><tr><th>Time</th><th>Action</th><th>Outcome</th><th>Message</th></tr></thead>
+    <tbody id="commandLogBody"><tr><td colspan="4" class="empty-state">No commands sent in this browser session</td></tr></tbody></table></div></section>
+        <section class="chart-container"><h3>Latest instrument rejections</h3><p class="table-scroll-hint">Scroll horizontally for remaining columns.</p>
+    <div class="scrollable-content responsive-region" tabindex="0" role="region" aria-label="Paper order rejections"><table class="data-table responsive-table" role="table">
+    <thead><tr><th>Time</th><th>Instrument</th><th>Reason</th><th>Order</th></tr></thead>
+    <tbody id="rejectionLogBody"><tr><td colspan="4" class="empty-state">No rejection details reported</td></tr></tbody></table></div></section>
+        <div class="chart-container">
+            <div class="chart-header">
+                <h2 class="chart-title">Portfolio paper fill attribution</h2>
+                <div style="font-size: 13px; color: var(--text-secondary);">Last 20 local fill events</div>
+            </div>
+            <p class="table-scroll-hint">Scroll horizontally for remaining columns.</p><div class="scrollable-content responsive-region" tabindex="0" role="region" aria-label="Portfolio paper fill attribution">
+                <table class="data-table responsive-table" role="table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Instrument</th>
+                            <th>Side</th>
+                            <th>Quantity</th>
+                            <th>Price</th>
+                            <th>Realized Δ</th>
+                            <th>Account P&amp;L at fill</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tradeAttributionBody">
+                        <tr>
+                            <td colspan="7" style="text-align: center; color: var(--text-tertiary); padding: var(--spacing-md);">
+                                No trades yet
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <section class="chart-container"><details style="margin-top:16px;"><summary>Review and import accounting actions</summary>
+                <label class="param-label" for="accountActionsJson">Sourced actions (JSON array)</label>
+                <textarea id="accountActionsJson" rows="6" style="width:100%;" placeholder="Paste sourced actions with action ID, type, instrument, effective time, source, and payload"></textarea>
+                <button class="control-button" id="importActionsButton" type="button">Validate and schedule actions</button>
+                <button class="control-button" id="reviewActionsButton" type="button">Review pending and applied actions</button>
+                <pre id="accountActionsResult" style="white-space:pre-wrap;font-size:12px;"></pre>
+            </details></section>
+      </section>
+      <section id="view-system" data-view-panel="system" aria-labelledby="systemTitle" hidden>
+        <div class="view-heading"><div><h2 id="systemTitle">System</h2><p>Read-only provider status and local paper-account administration.</p></div><button class="control-button" id="diagnosticsButton" type="button">Export diagnostics</button></div>
+        <section class="chart-container" aria-labelledby="researchTitle">
+          <div class="chart-header"><h3 id="researchTitle">Lead/lag research</h3><span id="researchStatus" role="status">Waiting for advisory research</span></div>
+          <p>Read-only, closed arrival-time buckets. Correlation is not causation or expected profit. No strategy or risk controls use these scores.</p>
+          <label for="researchInstrument">Research instrument</label><select id="researchInstrument" class="param-slider" onchange="renderResearch(crossAssetState?.research)"><option value="">All instruments</option></select>
+          <p class="table-scroll-hint">Scroll horizontally for remaining columns.</p>
+          <div class="scrollable-content" tabindex="0" role="region" aria-label="Advisory research samples and rankings"><table class="data-table"><thead><tr><th>Provider / generation</th><th>Instrument / price</th><th>Freshness</th><th>Samples</th><th>Positive probability / variance</th><th>Regime</th><th>Entropy / decay / lead</th><th>Priority</th></tr></thead><tbody id="researchBody"></tbody></table></div>
+          <details><summary>Relationship evidence and omissions</summary><p id="researchDiagnostics"></p><div class="scrollable-content" tabindex="0" role="region" aria-label="Lagged research relationships"><table class="data-table"><thead><tr><th>Source</th><th>Target</th><th>Lag buckets</th><th>Samples</th><th>Pearson correlation</th></tr></thead><tbody id="researchEdges"></tbody></table></div></details>
+        </section>
+        <section class="chart-container"><div class="chart-header"><h3>Market-data providers</h3><span id="providerSupervisorStatus" role="status">Live acceptance pending</span></div><p class="table-scroll-hint">Scroll horizontally for remaining columns.</p>
+    <div class="scrollable-content" tabindex="0" role="region" aria-label="Market data provider health"><table class="data-table">
+    <thead><tr><th>Provider</th><th>State</th><th>Instruments</th><th>Details</th></tr></thead>
+    <tbody id="providerHealthBody"><tr><td colspan="4" class="empty-state">Waiting for provider status</td></tr></tbody></table></div></section>
+        <section class="chart-container"><h3>Valuation sources</h3><div class="conversion-mark-list" id="conversionMarkList">Waiting for currency conversion marks.</div></section>
+        <details class="chart-container accounting-controls" id="paperAdjustmentDetails">
+            <summary style="cursor:pointer;font-weight:600;">Manual paper account adjustments</summary>
+            <p id="adjustmentInstrumentSummary" style="color:var(--text-secondary);font-size:13px;">
+                Select an instrument in Trading first. Adjustments are local paper ledger entries and require explicit action IDs.
+            </p>
+            <label class="param-label" for="adjustmentSource">Source for account adjustments</label>
+            <input class="param-slider" id="adjustmentSource" type="text" maxlength="200" placeholder="Statement, official notice, or imported source reference">
+            <div class="panel-grid-2">
+                <div class="param-control">
+                    <h2 class="chart-title">Equity split</h2>
+                    <label class="param-label" for="splitRatio">New shares per old share</label>
+                    <input class="param-slider" id="splitRatio" type="number" min="0.000001" step="any" value="2">
+                    <label class="param-label" for="splitActionId">Corporate-action ID</label>
+                    <input class="param-slider" id="splitActionId" type="text" maxlength="100" placeholder="e.g. AAPL-split-2026-01">
+                    <button class="control-button" id="applySplitButton" type="button">Apply paper split</button>
+                </div>
+                <div class="param-control">
+                    <h2 class="chart-title">Equity dividend</h2>
+                    <label class="param-label" for="dividendPerShare">Declared amount per share</label>
+                    <input class="param-slider" id="dividendPerShare" type="number" min="0" step="any" value="0">
+                    <label class="param-label" for="dividendEligibleQuantity">Signed shares eligible on record date</label>
+                    <input class="param-slider" id="dividendEligibleQuantity" type="number" step="any" value="0">
+                    <label class="param-label" for="dividendActionId">Corporate-action ID</label>
+                    <input class="param-slider" id="dividendActionId" type="text" maxlength="100" placeholder="e.g. AAPL-dividend-2026-01">
+                    <button class="control-button" id="applyDividendButton" type="button">Post paper dividend</button>
+                </div>
+                <div class="param-control">
+                    <h2 class="chart-title">Rolling-FX financing</h2>
+                    <label class="param-label" for="financingAmount">Signed amount in settlement currency</label>
+                    <input class="param-slider" id="financingAmount" type="number" step="any" value="0">
+                    <label class="param-label" for="financingKind">Financing description</label>
+                    <input class="param-slider" id="financingKind" type="text" maxlength="100" value="overnight financing">
+                    <label class="param-label" for="financingActionId">Adjustment ID</label>
+                    <input class="param-slider" id="financingActionId" type="text" maxlength="100" placeholder="e.g. EURUSD-financing-2026-01-01">
+                    <button class="control-button" id="postFinancingButton" type="button">Post paper financing</button>
+                </div>
+            </div>
+            <div class="param-control" id="futuresSettlementControls">
+                <h2 class="chart-title">Futures variation settlement</h2>
+                <label class="param-label" for="settlementPrice">Sourced settlement price</label>
+                <input class="param-slider" id="settlementPrice" type="number" step="any">
+                <label class="param-label" for="settlementActionId">Settlement action ID</label>
+                <input class="param-slider" id="settlementActionId" type="text" maxlength="100">
+                <button class="control-button" id="settleFutureButton" type="button">Post paper settlement</button>
+            </div>
+            
+            
+            <div style="color:var(--text-tertiary);font-size:12px;">
+                Enter values from an authoritative corporate-action or financing source. The runner does not infer eligibility, rates, or payments.
+            </div>
+        </details>
+        <section class="chart-container"><details style="margin-top:16px;"><summary>Preview a configuration migration</summary>
+                <p style="font-size:12px;color:var(--text-secondary);">Paste the proposed public configuration to review changes. This preview does not change the account.</p>
+                <textarea id="migrationConfigJson" rows="5" style="width:100%;" aria-label="Proposed public configuration"></textarea>
+                <button class="control-button" id="previewMigrationButton" type="button">Preview migration</button>
+                <pre id="migrationPreviewResult" style="white-space:pre-wrap;font-size:12px;"></pre>
+            </details></section>
+        <section class="chart-container"><h3>Portfolio administration</h3><p class="section-note">These actions affect the local simulated account.</p><div class="administration-actions"><button class="control-button reset" id="acknowledgeRiskButton" style="display:none;" disabled>Review and clear risk halt</button><button class="control-button reset" id="resetButton" disabled>Reset paper account</button></div></section>
+      </section>
+    </main>
+
+    <script>
+        // ============================================================================
+        // STATE MANAGEMENT
+        // ============================================================================
+        const PAPER_WS_PORT = 8765;
+        const PAPER_SESSION_TOKEN = '';
+        let applicationAccountId = null;
+        let applicationRevision = 0;
+        let lastHistoryFetchAt = 0;
+        let persistedHistoryRows = [];
+        let requestSequence = 0;
+        let ws = null;
+        let reconnectTimer = null;
+        let isConnected = false;
+        let crossAssetState = null;
+        let selectedInstrumentId = null;
+
+        const state = {
+            position: 0,
+            cash: 10000,
+            startingCash: 10000,
+            realizedPnl: 0,
+            unrealizedPnl: 0,
+            totalPnl: 0,
+            totalFees: 0,
+            equity: 10000,
+            totalVolume: 0,
+            volumeByCurrencyText: '',
+            reportingCurrency: 'USD',
+            selectedPositionUnit: 'BTC',
+            selectedPositionCurrency: 'USD',
+            trades: [],
+            fills: [],
+            activeOrders: [],
+            totalOrders: 0,
+            completedOrders: 0,
+            totalFillEvents: 0,
+            rejections: 0,
+            marketTrades: [],
+            totalMarketPrints: 0,
+            bookUpdates: 0,
+            sharpeRatio: 0,
+            maxDrawdown: 0,
+            fillRate: 0,
+            avgSlippage: 0,
+            midPrice: null,
+            spread: null,
+            bookReady: false,
+            tradeReady: false,
+            marketDataReady: false,
+            crossAssetMode: false,
+            hasBookSnapshot: false,
+            websocketStats: null,
+            depthAgeAnchorAt: null,
+            tradeAgeAnchorAt: null,
+            positionHistory: [],
+            pnlHistory: [],
+            crossAssetPositionHistoryByInstrument: {},
+            crossAssetPnlHistory: [],
+            lastCrossAssetHistorySampleAt: 0,
+            peakValue: 10000,
+            valuationValid: false,
+        };
+
+        const strategyState = {
+            running: false,
+            riskAversion: 0.05,
+            orderSize: 0.01,
+            interval: 5
+        };
+
+        let positionChart = null;
+        let pnlBreakdownChart = null;
+        let cumulativePnlChart = null;
+        let impactChart = null;
+
+        // ============================================================================
+        // CHART INITIALIZATION
+        // ============================================================================
+        const chartStyles = getComputedStyle(document.documentElement);
+        const chartColors = Object.fromEntries(
+            ['text', 'muted', 'positive', 'warning', 'negative', 'info', 'grid',
+             'positiveFill', 'warningFill', 'infoFill'].map(name =>
+                [name, chartStyles.getPropertyValue('--chart-' + name).trim()])
+        );
+        if (typeof Chart !== 'undefined') {
+            Chart.defaults.font.family = chartStyles.getPropertyValue('--font-outlier').trim();
+            Chart.defaults.color = chartColors.muted;
+        }
+        const chartDefaults = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    labels: {
+                        color: chartColors.text,
+                        font: {
+                            family: chartStyles.getPropertyValue('--font-outlier').trim(),
+                            size: 11
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: { color: chartColors.muted, font: { size: 10 } },
+                    grid: { color: chartColors.grid }
+                },
+                y: {
+                    ticks: { color: chartColors.muted, font: { size: 10 } },
+                    grid: { color: chartColors.grid }
+                }
+            }
+        };
+
+        function initializeVisibleCharts() {
+            if (typeof Chart === 'undefined') return;
+            if (!positionChart && chartVisible('positionChart')) {
+        // Position Chart
+        const positionCtx = document.getElementById('positionChart').getContext('2d');
+        positionChart = new Chart(positionCtx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'BTC Position',
+                    data: [],
+                    borderColor: chartColors.positive,
+                    backgroundColor: chartColors.positiveFill,
+                    fill: true,
+                    tension: 0.4
+                }, {
+                    label: 'Target (0 BTC)',
+                    data: [],
+                    borderColor: chartColors.warning,
+                    borderDash: [5, 5],
+                    fill: false,
+                    pointRadius: 0
+                }, {
+                    label: 'Max Limit (±0.1 BTC)',
+                    data: [],
+                    borderColor: chartColors.negative,
+                    borderDash: [2, 2],
+                    fill: false,
+                    pointRadius: 0
+                }]
+            },
+            options: { ...chartDefaults }
+        });
+
+            }
+            if (!pnlBreakdownChart && chartVisible('pnlBreakdownChart')) {
+        // P&L Breakdown Chart
+        const pnlBreakdownCtx = document.getElementById('pnlBreakdownChart').getContext('2d');
+        pnlBreakdownChart = new Chart(pnlBreakdownCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Realized P&L', 'Unrealized P&L'],
+                datasets: [{
+                    data: [0, 0],
+                    backgroundColor: [chartColors.positive, chartColors.info],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                ...chartDefaults,
+                indexAxis: 'y',
+                plugins: { legend: { display: false } },
+            }
+        });
+
+            }
+            if (!cumulativePnlChart && chartVisible('cumulativePnlChart')) {
+        // Cumulative P&L Chart
+        const cumulativePnlCtx = document.getElementById('cumulativePnlChart').getContext('2d');
+        cumulativePnlChart = new Chart(cumulativePnlCtx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Cumulative P&L',
+                    data: [],
+                    borderColor: chartColors.positive,
+                    backgroundColor: chartColors.positiveFill,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: { ...chartDefaults }
+        });
+
+            }
+        }
+
+        const pendingCommands = new Map();
+        const commandLog = [];
+        const variableDrafts = new Map();
+        const watchlistRows = new Map();
+        let activeView = 'trading';
+        let activeTradingTab = 'prints';
+        let variableVersion = 0;
+        let lastCrossAssetReceiveAt = 0;
+        let waitingForFreshState = true;
+        const variableFields = {
+            riskAversion: 'risk_aversion', orderSize: 'order_size', interval: 'strategy_interval',
+            spreadBps: 'spread_bps', inventorySkew: 'inventory_skew_bps'
+        };
+
+        function amount(value, currency = state.reportingCurrency, digits = 2) {
+            return value != null && Number.isFinite(Number(value))
+                ? `${Number(value).toLocaleString(undefined, { maximumFractionDigits: digits })} ${currency}`
+                : 'Unavailable';
+        }
+
+        function currentInstrument() {
+            return crossAssetState?.instruments?.find(item => item.instrument_id === selectedInstrumentId);
+        }
+
+        function chartVisible(id) {
+            return document.getElementById(id).getClientRects().length > 0;
+        }
+
+        function refreshVisibleCharts() {
+            requestAnimationFrame(() => {
+                initializeVisibleCharts();
+                [positionChart, pnlBreakdownChart, cumulativePnlChart, impactChart].forEach(chart => {
+                    if (chart && chartVisible(chart.canvas.id)) chart.resize();
+                });
+                updatePositionChart();
+                updatePnlCharts();
+                updateImpactChart();
+            });
+        }
+
+        function selectView(view) {
+            activeView = ['trading', 'portfolio', 'activity', 'system'].includes(view) ? view : 'trading';
+            document.querySelectorAll('[data-view-panel]').forEach(panel => {
+                panel.hidden = panel.id !== `view-${activeView}`;
+            });
+            document.querySelectorAll('[data-view]').forEach(link => {
+                if (link.dataset.view === activeView) link.setAttribute('aria-current', 'page');
+                else link.removeAttribute('aria-current');
+            });
+            refreshVisibleCharts();
+            refreshOverflowHints();
+        }
+
+        function selectTradingTab(tab) {
+            activeTradingTab = ['prints', 'fills', 'position'].includes(tab) ? tab : 'prints';
+            document.querySelectorAll('[data-trading-panel]').forEach(panel => {
+                panel.hidden = panel.dataset.tradingPanel !== activeTradingTab;
+            });
+            document.querySelectorAll('[data-trading-tab]').forEach(button => {
+                const selected = button.dataset.tradingTab === activeTradingTab;
+                button.setAttribute('aria-selected', String(selected));
+                button.tabIndex = selected ? 0 : -1;
+            });
+            refreshVisibleCharts();
+            refreshOverflowHints();
+        }
+
+        function initializeWorkbench() {
+            document.querySelectorAll('[data-view]').forEach(link => {
+                link.addEventListener('click', () => {
+                    selectView(link.dataset.view);
+                    if (link.tagName === 'BUTTON') location.hash = link.dataset.view;
+                });
+            });
+            window.addEventListener('hashchange', () => selectView(location.hash.slice(1)));
+            const tabs = [...document.querySelectorAll('[data-trading-tab]')];
+            document.querySelector('.trading-tabs').setAttribute('role', 'tablist');
+            tabs.forEach((button, index) => {
+                const name = button.dataset.tradingTab;
+                const panel = document.querySelector(`[data-trading-panel="${name}"]`);
+                button.id = `trade-tab-${name}`;
+                button.setAttribute('role', 'tab');
+                button.setAttribute('aria-controls', `trade-panel-${name}`);
+                panel.id = `trade-panel-${name}`;
+                panel.setAttribute('role', 'tabpanel');
+                panel.setAttribute('aria-labelledby', button.id);
+                button.addEventListener('click', () => selectTradingTab(button.dataset.tradingTab));
+                button.addEventListener('keydown', event => {
+                    let next;
+                    if (event.key === 'ArrowRight') next = (index + 1) % tabs.length;
+                    if (event.key === 'ArrowLeft') next = (index + tabs.length - 1) % tabs.length;
+                    if (event.key === 'Home') next = 0;
+                    if (event.key === 'End') next = tabs.length - 1;
+                    if (next === undefined) return;
+                    event.preventDefault();
+                    tabs[next].click();
+                    tabs[next].focus();
+                });
+            });
+            ['instrumentSearch', 'assetFilter'].forEach(id => {
+                document.getElementById(id).addEventListener('input', renderWatchlist);
+            });
+            document.getElementById('ordersScope').addEventListener('change', updateActiveOrders);
+            document.getElementById('fillsScope').addEventListener('change', updateFillHistory);
+            const narrow = matchMedia('(max-width: 1079px)');
+            const adaptWatchlist = () => { document.getElementById('watchlistPanel').open = !narrow.matches; };
+            narrow.addEventListener('change', adaptWatchlist);
+            adaptWatchlist();
+            initializeVariableInputs();
+            const header = document.querySelector('.workbench-header');
+            new ResizeObserver(() => {
+                document.documentElement.style.setProperty('--sticky-header-height', `${header.getBoundingClientRect().height + 12}px`);
+            }).observe(header);
+            document.getElementById('activeOrdersBody').closest('.chart-container').id = 'workingOrdersPanel';
+            [['ordersQuickButton', 'workingOrdersPanel'], ['fillsQuickButton', 'trade-panel-fills']].forEach(([button, destination]) => {
+                document.getElementById(button).addEventListener('click', () => {
+                    selectView('trading');
+                    location.hash = 'trading';
+                    if (destination === 'trade-panel-fills') selectTradingTab('fills');
+                    requestAnimationFrame(() => {
+                        const panel = document.getElementById(destination);
+                        panel.tabIndex = -1;
+                        panel.scrollIntoView({ block: 'start' });
+                        panel.focus({ preventScroll: true });
+                    });
+                });
+            });
+            selectView(location.hash.slice(1));
+            selectTradingTab('prints');
+            setInterval(checkCommandTimeouts, 1000);
+            window.addEventListener('resize', refreshOverflowHints);
+            document.querySelectorAll('details').forEach(details => details.addEventListener('toggle', refreshOverflowHints));
+        }
+
+        function refreshOverflowHints() {
+            // Labels must accompany replaced rows before the next browser paint.
+            document.querySelectorAll('.responsive-table').forEach(table => {
+                const labels = [...table.tHead.rows[0].cells].map(cell => cell.textContent);
+                for (const row of table.tBodies[0].rows) {
+                    for (const [index, cell] of [...row.cells].entries()) {
+                        if (cell.colSpan === 1) cell.dataset.label = labels[index];
+                        else cell.classList.add('empty-state');
+                    }
+                }
+            });
+            requestAnimationFrame(() => document.querySelectorAll('.scrollable-content').forEach(region => {
+                const hint = region.previousElementSibling;
+                if (hint?.classList.contains('table-scroll-hint')) {
+                    hint.style.display = region.getClientRects().length && region.scrollWidth > region.clientWidth ? 'block' : 'none';
+                }
+            }));
+        }
+
+        function renderWatchlist() {
+            const instruments = crossAssetState?.instruments || [];
+            const grid = document.getElementById('instrumentGrid');
+            const search = document.getElementById('instrumentSearch').value.trim().toLowerCase();
+            const asset = document.getElementById('assetFilter').value;
+            const labels = { crypto: 'Crypto', equity: 'Stocks', fx: 'FX', future: 'Futures' };
+            const identities = new Set(instruments.map(item => item.instrument_id));
+            for (const [id, row] of watchlistRows) {
+                if (!identities.has(id)) { row.remove(); watchlistRows.delete(id); }
+            }
+            let visible = 0;
+            instruments.forEach(item => {
+                let row = watchlistRows.get(item.instrument_id);
+                if (!row) {
+                    row = document.createElement('button');
+                    row.type = 'button';
+                    row.className = 'instrument-card';
+                    row.dataset.instrumentId = item.instrument_id;
+                    row.innerHTML = '<span class="instrument-card-title"></span><span class="instrument-price"></span><span class="instrument-card-detail"></span>';
+                    row.addEventListener('click', () => {
+                        selectedInstrumentId = row.dataset.instrumentId;
+                        renderCrossAssetState(crossAssetState);
+                        if (matchMedia('(max-width: 1079px)').matches) {
+                            document.getElementById('watchlistPanel').open = false;
+                            document.getElementById('selectedInstrumentTitle').focus({ preventScroll: true });
+                        }
+                    });
+                    watchlistRows.set(item.instrument_id, row);
+                    grid.append(row);
+                }
+                const provider = (crossAssetState.provider_supervision || []).find(value =>
+                    (value.instrument_ids || []).includes(item.instrument_id));
+                const needsAccess = ['access_denied', 'configuration_error'].includes(provider?.state);
+                const readiness = !isConnected || waitingForFreshState ? 'Last received / connection unavailable'
+                    : item.market_data_ready ? 'Feed ready' : needsAccess ? 'Setup required'
+                    : item.readiness?.message || String(item.market_status || 'Waiting for data').replaceAll('_', ' ');
+                const label = labels[item.asset_class] || item.asset_class;
+                row.querySelector('.instrument-card-title').textContent = `${item.symbol} / ${label}`;
+                row.querySelector('.instrument-price').textContent = amount(item.mid_price, item.quote_currency, 8);
+                row.querySelector('.instrument-card-detail').textContent = readiness;
+                row.setAttribute('aria-pressed', String(item.instrument_id === selectedInstrumentId));
+                row.title = `${item.symbol}: ${readiness}`;
+                row.hidden = !(asset === 'all' || asset === item.asset_class)
+                    || !`${item.symbol} ${label} ${item.venue}`.toLowerCase().includes(search);
+                if (!row.hidden) visible += 1;
+            });
+            setText('watchlistCount', `${visible} of ${instruments.length}`);
+            grid.dataset.empty = String(visible === 0);
+        }
+
+        function renderInstrumentDetails(selected, data) {
+            if (!selected) return;
+            setText('selectedInstrumentTitle', selected.symbol);
+            setText('selectedInstrumentMeta', `${selected.venue} / ${selected.quantity_unit} / ${selected.asset_class === 'future' ? `Multiplier ${selected.contract_multiplier} / expiry ${selected.expiry || 'unavailable'}` : selected.fx_accounting_mode ? `${selected.fx_accounting_mode} FX` : 'Local paper execution'}`);
+            const provider = (data.provider_supervision || []).find(item =>
+                (item.instrument_ids || []).includes(selected.instrument_id));
+            let explanation;
+            if (!isConnected || waitingForFreshState) explanation = 'Backend disconnected or awaiting fresh state. Quotes, orders, and balances are last received; command outcomes may be unknown.';
+            else if (data.circuit_breaker_active) explanation = `Portfolio risk halt: ${data.circuit_breaker_reason || 'Review required'}`;
+            else if (data.portfolio_error) explanation = `Portfolio valuation unavailable: ${data.portfolio_error}`;
+            else if (selected.accounting_status && selected.accounting_status !== 'ready') explanation = `Accounting input required: ${selected.accounting_status.replaceAll('_', ' ')}`;
+            else if (!selected.valuation_valid) explanation = `Valuation unavailable: ${selected.valuation_error || 'A valid mark is required'}`;
+            else if (!selected.market_data_ready) explanation = provider?.message || selected.readiness?.message || String(selected.market_status || 'Waiting for market data').replaceAll('_', ' ');
+            else if (!data.is_running) explanation = 'Portfolio strategy stopped. Start is a portfolio action.';
+            else if (selected.active_orders?.length) explanation = `${selected.active_orders.length} working local paper quote${selected.active_orders.length === 1 ? '' : 's'}. Fills require qualifying market events.`;
+            else if (selected.last_rejection) explanation = `Latest order rejected: ${selected.last_rejection.reason.replaceAll('_', ' ')}`;
+            else explanation = 'Feed ready. Waiting for the next eligible strategy decision.';
+            setText('selectedReadiness', explanation);
+            const details = [
+                ['Provider', provider ? `${String(provider.state).replaceAll('_', ' ')}${provider.message ? ': ' + provider.message : ''}` : 'See System for provider status'],
+                ['Feed', selected.readiness?.message || (selected.market_data_ready ? 'Ready' : 'Waiting for data')],
+                ['Session', String(selected.market_status || 'Unknown').replaceAll('_', ' ')],
+                ['Accounting', String(selected.accounting_status || 'Unknown').replaceAll('_', ' ')],
+                ['Valuation', selected.valuation_valid ? `Valid / ${selected.mark_basis || 'observed mark'}` : selected.valuation_error || 'Unavailable'],
+                ['Quote age', selected.quote_age_seconds == null ? 'No quote received' : `${Number(selected.quote_age_seconds).toFixed(1)} seconds`],
+                ['Trade age', selected.trade_age_seconds == null ? 'No public trades supplied' : `${Number(selected.trade_age_seconds).toFixed(1)} seconds`],
+                ['Execution', selected.asset_class === 'fx' ? 'Conservative quote-based paper estimates; no observed executions' : 'Local paper fills; public trades shown separately']
+            ];
+            setText('readinessDetails', details.map(([label, value]) => `${label}: ${value}`).join('\n'));
+            refreshOverflowHints();
+            const pnlTitle = document.getElementById('pnlBreakdownChart').closest('.chart-container').querySelector('.chart-title');
+            pnlTitle.textContent = `${selected.symbol} realized / unrealized P&L (${state.selectedPositionCurrency})`;
+        }
+
+        function updateSelectedFeedLabels() {
+            const selected = currentInstrument();
+            if (!selected) return;
+            if (!isConnected || waitingForFreshState) {
+                setText('bookUpdateStatus', 'Disconnected / last received quotes');
+                setText('streamStatus', 'Backend disconnected or awaiting fresh state; displayed market data is last received.');
+                return;
+            }
+            const elapsed = Math.max(0, Date.now() - lastCrossAssetReceiveAt) / 1000;
+            const age = value => value == null ? 'not received' : `${(Number(value) + elapsed).toFixed(1)}s old`;
+            const provider = crossAssetState.providers?.find(item => item.provider_id === selected.provider);
+            const suppliesTrades = selected.readiness?.requires_trades ?? provider?.capabilities?.trades;
+            const tradeStatus = suppliesTrades === false ? 'not supplied by this feed' : age(selected.trade_age_seconds);
+            setText('streamStatus', `Quote: ${age(selected.quote_age_seconds)} / Public trades: ${tradeStatus}`);
+            setText('bookUpdateStatus', selected.market_data_ready
+                ? `Feed ready / quote ${age(selected.quote_age_seconds)}`
+                : `Cached quote / ${selected.readiness?.message || String(selected.market_status || 'Waiting for data').replaceAll('_', ' ')}`);
+        }
+
+        function renderPortfolioDetails(data) {
+            const portfolio = data.portfolio;
+            const currency = data.reporting_currency || 'USD';
+            const analytics = data.analytics || {};
+            const cells = values => '<tr>' + values.map(value => `<td>${escapeHtml(value)}</td>`).join('') + '</tr>';
+            document.getElementById('positionsBody').innerHTML = data.instruments.map(item => cells([
+                item.symbol, amount(item.position, item.quantity_unit, 8), amount(item.mid_price, item.quote_currency, 8),
+                item.valuation_valid ? amount(item.unrealized_pnl, item.settlement_currency || item.quote_currency, 4) : 'Unavailable',
+                amount(item.realized_pnl, item.settlement_currency || item.quote_currency, 4),
+                item.valuation_valid ? item.mark_basis || 'Valid mark' : item.valuation_error || 'Unavailable',
+                item.accounting_status || 'Unknown'
+            ])).join('');
+            const currencies = Object.keys(portfolio?.cash_by_currency || {});
+            document.getElementById('cashBalancesBody').innerHTML = currencies.length ? currencies.map(code => cells([
+                code, amount(portfolio.cash_by_currency[code], code), amount(portfolio.available_cash_by_currency?.[code], code),
+                amount(portfolio.reserved_cash_by_currency?.[code], code), amount(portfolio.reserved_margin_by_currency?.[code], code)
+            ])).join('') : cells(['Unavailable', 'Portfolio valuation required', '—', '—', '—']);
+            const values = [
+                ['Realized P&L', portfolio?.realized_pnl], ['Unrealized P&L', portfolio?.unrealized_pnl],
+                ['Translation P&L', portfolio?.translation_pnl], ['Fees paid', portfolio?.fees_paid],
+                ['Other costs paid', portfolio?.costs_paid], ['Unpaid accrued costs', portfolio?.accrued_costs],
+                ['Income', portfolio?.income], ['Initial margin', portfolio?.initial_margin_required],
+                ['Maintenance margin', portfolio?.maintenance_margin_required],
+                ['Position gross exposure', portfolio ? analytics.gross_exposure : null],
+                ['Position net exposure', portfolio ? analytics.net_exposure : null],
+                ['Equity less initial margin', portfolio ? analytics.margin_headroom : null]
+            ];
+            document.getElementById('portfolioBreakdown').innerHTML = (data.portfolio_error
+                ? `<dt>Valuation unavailable</dt><dd>${escapeHtml(data.portfolio_error)}</dd>` : '') + values.map(([label, value]) =>
+                `<dt>${escapeHtml(label)}</dt><dd>${escapeHtml(amount(value, currency))}</dd>`).join('');
+            const limits = data.risk_limits;
+            setText('portfolioRiskLimits', limits ? `Configured portfolio limits: gross exposure ${amount(limits.max_gross_exposure, currency)}; daily loss ${amount(limits.max_daily_loss, currency)}; ${limits.max_orders_per_minute} orders/minute. Position exposure above excludes pending orders; the backend evaluates reservations and proposed orders.` : 'Configured limits unavailable from this backend. Backend risk checks remain authoritative.');
+            const providers = data.provider_supervision?.length ? data.provider_supervision : data.providers || [];
+            renderResearch(data.research);
+            document.getElementById('providerHealthBody').innerHTML = providers.map(provider => cells([
+                provider.provider_id, String(provider.state || 'Unknown').replaceAll('_', ' '),
+                (provider.instrument_ids || []).length, provider.message || 'No additional provider message'
+            ])).join('') || cells(['No provider state received', 'Unavailable', '—', '—']);
+            document.getElementById('rejectionLogBody').innerHTML = data.instruments.filter(item => item.last_rejection).map(item => cells([
+                formatMarketTime(item.last_rejection.timestamp), item.symbol,
+                item.last_rejection.reason.replaceAll('_', ' '), item.last_rejection.order_id || '—'
+            ])).join('') || cells(['—', '—', data.instruments.some(item => item.total_rejections > 0)
+                ? 'Older rejection details unavailable in the retained read model.' : 'No rejected paper orders recorded', '—']);
+            refreshOverflowHints();
+        }
+
+        function renderResearch(research) {
+            const select = document.getElementById('researchInstrument');
+            const selected = select.value;
+            const rows = research?.streams || [];
+            const identities = [...new Set(rows.map(row => row.instrument_id))].sort();
+            select.innerHTML = '<option value="">All instruments</option>' + identities.map(identity => `<option value="${escapeHtml(identity)}">${escapeHtml(identity)}</option>`).join('');
+            select.value = identities.includes(selected) ? selected : '';
+            const cells = values => '<tr>' + values.map(value => `<td>${escapeHtml(value)}</td>`).join('') + '</tr>';
+            const number = value => Number.isFinite(value) ? value.toFixed(3) : 'Unavailable';
+            setText('researchStatus', research?.status === 'ready' ? `Advisory · snapshot ${formatMarketTime(research.processing_ts)} · ${number(research.compute_ms)} ms` : `Research ${research?.status || 'unavailable'}`);
+            document.getElementById('researchBody').innerHTML = rows.filter(row => !select.value || row.instrument_id === select.value).map(row => cells([
+                `${row.provider} / ${row.generation}`, `${row.instrument_id} / ${row.price_kind}`,
+                `${row.stale ? 'Stale' : 'Fresh'} · ${number(row.age_seconds)} s`, row.samples,
+                `${number(row.positive_return_probability)} / ${number(row.uncertainty)}`, row.regime,
+                `${number(row.entropy)} / ${number(row.decay_weight)} / ${number(row.lead_strength)}`, number(row.research_priority)
+            ])).join('') || cells(['No usable research samples', '—', '—', '—', '—', '—', '—', '—']);
+            document.getElementById('researchEdges').innerHTML = (research?.edges || []).filter(edge => !select.value || edge.source[1] === select.value || edge.target[1] === select.value).map(edge => cells([
+                edge.source.join(' / '), edge.target.join(' / '), edge.lag_buckets, edge.samples, number(edge.correlation)
+            ])).join('') || cells(['No supported lagged relationships', '—', '—', '—', '—']);
+            setText('researchDiagnostics', JSON.stringify({...(research?.diagnostics || {}), skipped_capacity: research?.skipped_capacity || 0, error: research?.error || null}));
+        }
+
+        function showCommandOutcome(outcome, message) {
+            const region = document.getElementById('controlMessage');
+            region.dataset.outcome = outcome;
+            region.hidden = outcome === 'connected';
+            region.textContent = message;
+        }
+
+        function renderCommandLog() {
+            document.getElementById('commandLogBody').innerHTML = commandLog.slice().reverse().map(entry =>
+                `<tr><td>${escapeHtml(new Date(entry.startedAt).toLocaleTimeString())}</td><td>${escapeHtml(entry.command.replaceAll('_', ' '))}</td><td>${escapeHtml(entry.outcome)}</td><td>${escapeHtml(entry.message)}</td></tr>`
+            ).join('') || '<tr><td colspan="4" class="empty-state">No commands in this browser session. Financial history is saved by the backend.</td></tr>';
+            refreshOverflowHints();
+        }
+
+        function trackCommand(id, command, payload, quiet) {
+            const entry = { id, command, startedAt: Date.now(), outcome: 'pending', quiet,
+                message: 'Waiting for backend acknowledgment.',
+                instrumentId: payload.instrument_id || 'legacy', draftVersion: variableDrafts.get(payload.instrument_id || 'legacy')?.version };
+            pendingCommands.set(id, entry);
+            if (!quiet) {
+                commandLog.push(entry);
+                if (commandLog.length > 200) commandLog.shift();
+                showCommandOutcome('pending', `${command.replaceAll('_', ' ')}: waiting for backend acknowledgment.`);
+                renderCommandLog();
+            }
+            while (pendingCommands.size > 200) pendingCommands.delete(pendingCommands.keys().next().value);
+            return entry;
+        }
+
+        function completeCommand(message) {
+            const entry = pendingCommands.get(message.request_id) || (!message.request_id
+                ? [...pendingCommands.values()].find(item => item.command === message.action && item.outcome === 'pending') : null);
+            if (message.request_id) pendingCommands.delete(message.request_id);
+            else if (entry) pendingCommands.delete(entry.id);
+            const accepted = message.success === true;
+            const detail = message.message || message.data?.message
+                || (accepted ? 'Backend acknowledged the paper command.' : 'Backend rejected the paper command.');
+            const outcome = accepted ? 'accepted' : 'rejected';
+            if (entry) {
+                entry.outcome = outcome;
+                entry.message = detail;
+                if (accepted && entry.command === 'update_params') {
+                    // Acknowledgments can arrive after a newer snapshot. Only
+                    // snapshots update the cross-asset financial read model.
+                    if (entry.instrumentId === 'legacy' && message.data?.updated) {
+                        updateStrategyParameters(message.data.updated, message.data.updated.strategy_interval);
+                    }
+                    if (variableDrafts.get(entry.instrumentId)?.version === entry.draftVersion) variableDrafts.delete(entry.instrumentId);
+                }
+                if (entry.command === 'update_params') {
+                    setText('variablesMessage', accepted ? 'Variables applied by the backend.' : `${detail} Draft retained for review.`);
+                    refreshVariableInputs();
+                }
+            }
+            if (!entry?.quiet) showCommandOutcome(outcome, `${String(message.action || entry?.command || 'Paper command').replaceAll('_', ' ')}: ${detail}`);
+            renderCommandLog();
+        }
+
+        function checkCommandTimeouts() {
+            pendingCommands.forEach(entry => {
+                if (entry.outcome === 'pending' && Date.now() - entry.startedAt >= 10000) {
+                    entry.outcome = 'unknown';
+                    entry.message = 'Acknowledgment not received. Outcome unknown; review refreshed account state before retrying.';
+                    if (!entry.quiet) showCommandOutcome('unknown', entry.message);
+                }
+            });
+            renderCommandLog();
+        }
+
+        function losePendingCommands() {
+            pendingCommands.forEach(entry => {
+                if (entry.outcome !== 'pending') return;
+                entry.outcome = 'unknown';
+                entry.message = 'Connection lost before acknowledgment. Outcome unknown; review the account after reconnecting.';
+                if (!entry.quiet) showCommandOutcome('unknown', entry.message);
+            });
+            renderCommandLog();
+        }
+
+        function variableKey() { return state.crossAssetMode ? selectedInstrumentId : 'legacy'; }
+
+        function refreshVariableInputs() {
+            const selected = currentInstrument();
+            const values = state.crossAssetMode ? selected || {} : {
+                risk_aversion: strategyState.riskAversion, order_size: strategyState.orderSize,
+                strategy_interval: strategyState.interval
+            };
+            const draft = variableDrafts.get(variableKey());
+            const prefixes = state.crossAssetMode ? ['spreadBps', 'inventorySkew'] : ['riskAversion', 'orderSize', 'interval'];
+            prefixes.forEach(prefix => {
+                const value = draft?.values[variableFields[prefix]] ?? values[variableFields[prefix]];
+                if (value == null) return;
+                document.getElementById(prefix + 'Slider').value = value;
+                document.getElementById(prefix + 'Input').value = value;
+                setText(prefix + 'Value', String(value));
+            });
+            document.getElementById('applyVariablesButton').disabled = !isConnected || !draft
+                || [...pendingCommands.values()].some(entry => entry.command === 'update_params'
+                    && entry.instrumentId === variableKey() && entry.outcome === 'pending');
+        }
+
+        function initializeVariableInputs() {
+            Object.entries(variableFields).forEach(([prefix, parameter]) => {
+                const slider = document.getElementById(prefix + 'Slider');
+                const input = document.getElementById(prefix + 'Input');
+                ['min', 'max', 'step'].forEach(name => input.setAttribute(name, slider.getAttribute(name)));
+                [slider, input].forEach(control => control.addEventListener('input', () => {
+                    const draft = variableDrafts.get(variableKey()) || { values: {} };
+                    draft.values[parameter] = Number(control.value);
+                    draft.version = ++variableVersion;
+                    variableDrafts.set(variableKey(), draft);
+                    if (control === input) slider.value = input.value;
+                    else input.value = slider.value;
+                    setText(prefix + 'Value', control.value);
+                    setText('variablesMessage', 'Draft variables. Apply to send changes to the backend.');
+                    refreshVariableInputs();
+                }));
+            });
+            document.getElementById('applyVariablesButton').addEventListener('click', () => {
+                const draft = variableDrafts.get(variableKey());
+                if (!draft) return;
+                const prefixes = state.crossAssetMode ? ['spreadBps', 'inventorySkew'] : ['riskAversion', 'orderSize', 'interval'];
+                if (!prefixes.every(prefix => document.getElementById(prefix + 'Input').reportValidity())) return;
+                sendParameterUpdate(draft.values);
+                refreshVariableInputs();
+            });
+        }
+
+
+        // ============================================================================
+        // WEBSOCKET CONNECTION
+        // ============================================================================
+        function scheduleReconnect() {
+            if (reconnectTimer) return;
+            reconnectTimer = setTimeout(() => {
+                reconnectTimer = null;
+                connect();
+            }, 2000);
+        }
+
+        function connect() {
+            if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) return;
+            try {
+                ws = new WebSocket(`ws://${window.location.hostname || '127.0.0.1'}:${PAPER_WS_PORT}`);
+
+                ws.onopen = () => {
+                    waitingForFreshState = true;
+                    if (PAPER_SESSION_TOKEN) ws.send(JSON.stringify({ type: 'authenticate', token: PAPER_SESSION_TOKEN }));
+                    state.bookReady = false;
+                    state.tradeReady = false;
+                    state.marketDataReady = false;
+                    state.websocketStats = null;
+                    state.depthAgeAnchorAt = null;
+                    state.tradeAgeAnchorAt = null;
+                    updateConnectionStatus(true);
+                    updateFeedReadiness({});
+                    updateStreamStatus({});
+                    const outcome = document.getElementById('controlMessage').dataset.outcome;
+                    if (!outcome || ['connected', 'disconnected'].includes(outcome)) {
+                        showCommandOutcome('connected', '');
+                    }
+                };
+
+                ws.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        handleMessage(data);
+                    } catch (error) {
+                        console.error('Error parsing message:', error);
+                    }
+                };
+
+                ws.onerror = (error) => {
+                    console.warn('Paper backend connection failed; retrying.');
+                    updateConnectionStatus(false);
+                    if (ws && ws.readyState !== WebSocket.CLOSED) ws.close();
+                };
+
+                ws.onclose = () => {
+                    losePendingCommands();
+                    updateConnectionStatus(false);
+                    scheduleReconnect();
+                };
+            } catch (error) {
+                console.error('Paper backend connection failed:', error);
+                updateConnectionStatus(false);
+                scheduleReconnect();
+            }
+        }
+
+        function handleMessage(message) {
+            const data = message.data || {};
+            if (message.type === 'authenticated') return;
+            if (message.type === 'full_state') {
+                handleFullState(message);
+            } else if (message.type === 'status' || message.type === 'strategy_status') {
+                if (Array.isArray(data.instruments)) renderCrossAssetState(data);
+                else handleStatus(data);
+            } else if (message.type === 'orderbook' || message.type === 'market') {
+                handleMarketUpdate(data);
+                noteStreamEvent('depth');
+            } else if (message.type === 'price') {
+                handleMarketUpdate({ mid_price: data.price });
+            } else if (message.type === 'trade') {
+                // Keep public market prints visible but separate from simulated fills.
+                handlePublicTrade(data);
+                noteStreamEvent('trade');
+            } else if (message.type === 'public_trade') {
+                handlePublicTrade(data);
+                noteStreamEvent('trade');
+            } else if (message.type === 'multi_asset_state') {
+                renderCrossAssetState(data);
+            } else if (message.type === 'position') {
+                handlePositionUpdate(data);
+            } else if (message.type === 'fill' || message.type === 'strategy_fill') {
+                handleFill(data);
+            } else if (message.type === 'performance_metrics') {
+                handlePerformanceMetrics(data);
+            } else if (message.type === 'active_orders') {
+                handleActiveOrders(data);
+            } else if (message.type === 'orders_cancelled') {
+                handleCancelledOrders(data);
+            } else if (message.type === 'control_response') {
+                if (message.revision !== undefined) applicationRevision = Math.max(applicationRevision, Number(message.revision));
+                completeCommand(message);
+                if (message.success === false) return;
+                if (message.action === 'get_history') renderPersistedHistory(data);
+                if (message.action === 'get_diagnostics') downloadJson('paper-diagnostics.json', data);
+                if (message.action === 'preview_migration') setText('migrationPreviewResult', JSON.stringify(data, null, 2));
+                if (message.action === 'get_account_actions' || message.action === 'import_account_actions') {
+                    setText('accountActionsResult', JSON.stringify(data, null, 2));
+                }
+                if (message.action === 'reset_strategy' || message.action === 'reset') resetDisplayHistory();
+
+            } else if (message.type === 'error') {
+                const pending = [...pendingCommands.values()].filter(entry => entry.outcome === 'pending');
+                if (pending.length === 1) completeCommand({ ...message, request_id: pending[0].id, success: false });
+                else showCommandOutcome('rejected', message.message || 'Paper account command failed.');
+            }
+        }
+
+        function handleFullState(message) {
+            const account = message.data || {};
+            const multiState = message.multi_asset_state || (Array.isArray(account.instruments) ? account : null);
+            if (multiState) {
+                renderCrossAssetState(multiState);
+                return;
+            }
+            state.crossAssetMode = false;
+            applicationAccountId = null;
+            applicationRevision = 0;
+            waitingForFreshState = false;
+            crossAssetState = null;
+            state.selectedPositionCurrency = 'USD';
+            document.getElementById('multiAssetPanel').hidden = true;
+            document.getElementById('legacyStrategyVariables').style.display = '';
+            document.getElementById('crossAssetVariables').style.display = 'none';
+            document.getElementById('resetButton').style.display = '';
+            updateStreamStatus(message.websocket || {});
+            if (message.websocket) {
+                state.totalMarketPrints = Number(message.websocket.trade_updates) || 0;
+                state.bookUpdates = Number(message.websocket.orderbook_updates) || 0;
+                renderMarketTape();
+                if (state.bookUpdates > 0) setText('bookUpdateStatus', `Live / ${state.bookUpdates.toLocaleString()} depth updates`);
+            }
+            if (Array.isArray(message.market_trades)) {
+                state.marketTrades = message.market_trades
+                    .map(normalizePublicTrade)
+                    .filter(Boolean)
+                    .reverse()
+                    .slice(0, 20);
+                renderMarketTape();
+            }
+            handleStatus(account, false);
+            handlePositionUpdate(message.trading || account);
+            if (message.market) handleMarketUpdate(message.market, false);
+            if (Array.isArray(account.active_orders)) handleActiveOrders({ orders: account.active_orders });
+            if (Array.isArray(account.recent_trades)) {
+                state.fills = account.recent_trades.slice(-20).map(fill => ({
+                    ...fill,
+                    timestamp: fill.timestamp ? new Date(fill.timestamp).toLocaleTimeString() : '--'
+                }));
+                state.trades = account.recent_trades.slice(-20).map(fill => ({
+                    ...fill,
+                    pnl: Number(fill.realized_pnl || 0),
+                    cumulative: Number(fill.total_pnl ?? state.totalPnl),
+                    timestamp: fill.timestamp ? new Date(fill.timestamp).toLocaleTimeString() : '--'
+                }));
+                updateFillHistory();
+                updateTradeAttribution();
+            }
+            updateFeedReadiness(account);
+            updateAllDisplays();
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, character => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[character]));
+        }
+
+        function renderCrossAssetState(data) {
+            if (!data || !Array.isArray(data.instruments)) return;
+            state.crossAssetMode = true;
+            if (data.application && Number(data.application.revision) < applicationRevision) return;
+            if (data !== crossAssetState) lastCrossAssetReceiveAt = Date.now();
+            waitingForFreshState = false;
+            crossAssetState = data;
+            if (data.application) {
+                applicationAccountId = data.application.account_id;
+                applicationRevision = Math.max(applicationRevision, Number(data.application.revision || 0));
+            }
+            const supervised = data.provider_supervision || [];
+            setText('providerSupervisorStatus', 'Live acceptance pending / ' + supervised.map(provider =>
+                `${provider.provider_id}: ${String(provider.state).replaceAll('_', ' ')}${provider.message ? ` — ${provider.message}` : ''}`).join(' | '));
+            const panel = document.getElementById('multiAssetPanel');
+            panel.hidden = false;
+            document.getElementById('legacyStrategyVariables').style.display = 'none';
+            document.getElementById('crossAssetVariables').style.display = 'block';
+            document.getElementById('resetButton').style.display = 'none';
+
+            const instruments = data.instruments;
+            if (!selectedInstrumentId || !instruments.some(item => item.instrument_id === selectedInstrumentId)) {
+                selectedInstrumentId = (instruments.find(item => item.asset_class === 'crypto') || instruments[0] || {}).instrument_id;
+            }
+            const selected = instruments.find(item => item.instrument_id === selectedInstrumentId) || instruments[0];
+            const readyCount = instruments.filter(item => item.market_data_ready).length;
+            const portfolio = data.portfolio || {};
+            const reporting = data.reporting_currency || portfolio.reporting_currency || 'USD';
+            state.reportingCurrency = reporting;
+            state.startingCash = Number(portfolio.starting_equity ?? state.startingCash);
+            document.getElementById('reportingCurrencyLabel').textContent = reporting;
+            document.getElementById('feesCurrencyLabel').textContent = reporting;
+            const volumeByCurrency = {};
+            instruments.forEach(item => {
+                const currency = item.asset_class === 'future'
+                    ? (item.settlement_currency || item.quote_currency)
+                    : item.quote_currency;
+                if (currency) {
+                    volumeByCurrency[currency] = (volumeByCurrency[currency] || 0)
+                        + Number(item.total_traded_notional || 0);
+                }
+            });
+            state.volumeByCurrencyText = Object.entries(volumeByCurrency)
+                .filter(([, value]) => value > 0)
+                .map(([currency, value]) => `${value.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${currency}`)
+                .join(' / ') || 'No paper volume';
+            const haltText = data.circuit_breaker_active
+                ? ` / RISK HALT: ${data.circuit_breaker_reason || 'review required'}` : '';
+            const assumptionsText = data.execution_assumptions_verified === false
+                ? ' / Prior execution settings were not recorded' : '';
+            document.getElementById('multiAssetSummary').textContent =
+                `${readyCount} of ${instruments.length} instruments ready / ${data.execution_mode || 'local_paper'} execution${haltText}${assumptionsText}`;
+            document.getElementById('portfolioSummary').textContent = portfolio.portfolio_error || data.portfolio_error
+                ? `Portfolio mark unavailable: ${portfolio.portfolio_error || data.portfolio_error}`
+                : `Equity ${Number(portfolio.equity || 0).toLocaleString(undefined, { style: 'currency', currency: reporting })} / P&L ${Number(portfolio.total_pnl || 0).toLocaleString(undefined, { style: 'currency', currency: reporting })} / Income ${Number(portfolio.income || 0).toLocaleString(undefined, { style: 'currency', currency: reporting })}`;
+
+            renderWatchlist();
+
+            const marks = data.currency_conversion_marks || [];
+            document.getElementById('conversionMarkList').textContent = marks.length
+                ? 'Currency marks: ' + marks.map(mark => `${mark.currency}/${reporting} ${mark.rate} / ${mark.source}${mark.stale ? ' / STALE' : ''}`).join(' | ')
+                : 'Currency conversions use fresh provider FX quotes; missing or stale marks block affected risk.';
+
+            if (selected) {
+                document.getElementById('liveBookTitle').textContent = `${selected.symbol} / ${selected.venue} Quotes`;
+                document.getElementById('publicTapeTitle').textContent = `${selected.symbol} Public Trades`;
+                document.getElementById('marketTapeSizeHeader').textContent = `Size (${selected.quantity_unit || 'units'})`;
+                document.getElementById('midPriceLabel').textContent = `${selected.symbol} mid`;
+                if (selected.mid_price != null && Number.isFinite(Number(selected.mid_price)) && Array.isArray(selected.bids) && Array.isArray(selected.asks) && selected.bids.length && selected.asks.length) {
+                    renderOrderBook({ bids: selected.bids, asks: selected.asks }, false,
+                        selected.asset_class === 'future');
+                    state.midPrice = Number(selected.mid_price);
+                    setText('midPrice', `${Number(selected.mid_price).toLocaleString(undefined, { maximumFractionDigits: 8 })} ${selected.quote_currency || ''}`);
+                    state.spread = Number(selected.best_ask) - Number(selected.best_bid);
+                    setText('marketSpread', `${state.spread.toLocaleString(undefined, { maximumFractionDigits: 8 })} ${selected.quote_currency || ''}`);
+                } else {
+                    state.midPrice = null;
+                    state.spread = null;
+                    setText('midPrice', '—');
+                    setText('marketSpread', '—');
+                    document.getElementById('orderBookBody').innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-tertiary);padding:var(--spacing-md);">Waiting for this instrument\'s quote feed</td></tr>';
+                }
+                // Starting is a portfolio action: allow it when any configured
+                // instrument is ready. The paper engine independently gates
+                // quotes per instrument, so a closed market does not block others.
+                state.marketDataReady = readyCount > 0;
+                state.marketTrades = (selected.public_trades || []).map(trade => ({
+                    ...trade,
+                    time: formatMarketTime(trade.timestamp),
+                    side: String(trade.side || '').toLowerCase(),
+                    price: Number(trade.price),
+                    quantity: Number(trade.quantity || 0),
+                    size: Number(trade.quantity || 0)
+                })).slice(-20).reverse();
+                renderMarketTape();
+                state.position = Number(selected.position || 0);
+                state.selectedPositionUnit = selected.quantity_unit || '';
+                state.selectedPositionCurrency = selected.asset_class === 'future'
+                    ? (selected.settlement_currency || selected.quote_currency || reporting)
+                    : (selected.quote_currency || reporting);
+                document.getElementById('currentPosition').textContent = `${state.position.toLocaleString(undefined, { maximumFractionDigits: 8 })} ${selected.quantity_unit || ''}`;
+                state.realizedPnl = Number(selected.realized_pnl || 0);
+                state.unrealizedPnl = Number(selected.unrealized_pnl || 0);
+                setText('strategyInstrumentLabel', `Applies to selected instrument: ${selected.symbol}`);
+                refreshVariableInputs();
+                renderInstrumentDetails(selected, data);
+                const rollButton = document.getElementById('rollFutureButton');
+                if (selected.asset_class === 'future' && selected.roll_to) {
+                    rollButton.style.display = '';
+                    const replacement = instruments.find(item => item.instrument_id === selected.roll_to);
+                    rollButton.textContent = `Roll ${selected.symbol} → ${replacement?.symbol || selected.roll_to}`;
+                } else {
+                    rollButton.style.display = 'none';
+                }
+                const isEquity = selected.asset_class === 'equity';
+                const isRollingFx = selected.asset_class === 'fx' && selected.fx_accounting_mode === 'rolling';
+                document.getElementById('splitRatio').closest('.param-control').hidden = !isEquity;
+                document.getElementById('dividendPerShare').closest('.param-control').hidden = !isEquity;
+                document.getElementById('financingAmount').closest('.param-control').hidden = !isRollingFx;
+                document.getElementById('adjustmentInstrumentSummary').textContent =
+                    `Selected: ${selected.symbol} (${selected.instrument_id}). Adjustments change the local paper ledger only and require verified source values.`;
+                const positionTitle = document.querySelector('#positionChart')?.closest('.chart-container')?.querySelector('.chart-title');
+                if (positionTitle) positionTitle.textContent = `${selected.symbol} Position Over Time`;
+                const historicalFills = (data.recent_fills || []).slice(-100);
+                {
+                    state.fills = historicalFills.map(fill => ({
+                        ...fill,
+                        timestamp: formatMarketTime(fill.timestamp),
+                        size: Number(fill.quantity || 0)
+                    }));
+                    state.trades = historicalFills.map(fill => ({
+                        ...fill,
+                        pnl: Number(fill.realized_pnl || 0),
+                        cumulative: Number(fill.total_pnl ?? state.totalPnl),
+                        timestamp: formatMarketTime(fill.timestamp)
+                    }));
+                    updateFillHistory();
+                    updateTradeAttribution();
+                }
+                document.querySelector('.market-activity-grid').style.display = '';
+            }
+            state.valuationValid = Boolean(data.portfolio) && !data.portfolio_error;
+            state.equity = state.valuationValid ? portfolio.equity : null;
+            state.totalPnl = state.valuationValid ? portfolio.total_pnl : null;
+            state.totalFees = state.valuationValid ? portfolio.fees_paid : null;
+            if (portfolio.cash_by_currency) state.cash = portfolio.cash_by_currency[reporting];
+            renderPortfolioDetails(data);
+            const historyNow = Date.now();
+            if (!applicationAccountId && historyNow - state.lastCrossAssetHistorySampleAt >= 1000) {
+                instruments.forEach(item => {
+                    const positionHistory = state.crossAssetPositionHistoryByInstrument[item.instrument_id] || [];
+                    positionHistory.push({
+                        time: new Date(historyNow).toLocaleTimeString(),
+                        position: Number(item.position || 0),
+                    });
+                    state.crossAssetPositionHistoryByInstrument[item.instrument_id] = positionHistory.slice(-50);
+                });
+                state.crossAssetPnlHistory.push({
+                    time: new Date(historyNow).toLocaleTimeString(),
+                    pnl: state.valuationValid ? state.totalPnl : null,
+                });
+                state.crossAssetPnlHistory = state.crossAssetPnlHistory.slice(-50);
+                state.lastCrossAssetHistorySampleAt = historyNow;
+            }
+            if (selected) {
+                if (applicationAccountId) applyPersistedHistory();
+                else {
+                    state.positionHistory = state.crossAssetPositionHistoryByInstrument[selected.instrument_id] || [];
+                    state.pnlHistory = state.crossAssetPnlHistory;
+                }
+            }
+            document.getElementById('futuresSettlementControls').hidden = selected?.asset_class !== 'future';
+            if (applicationAccountId && historyNow - lastHistoryFetchAt > 30000) requestPersistedHistory({ quiet: true });
+            const totals = data.totals || {};
+            state.totalOrders = Number(totals.total_orders_sent || 0);
+            state.totalFillEvents = Number(totals.total_fills || 0);
+            state.rejections = Number(totals.total_rejections || 0);
+            state.totalVolume = Number(totals.total_traded_notional || 0);
+            state.activeOrders = instruments.flatMap(item => (item.active_orders || []).map(order => ({
+                ...order, symbol: item.symbol, quantity_unit: item.quantity_unit,
+                quote_currency: item.quote_currency, settlement_currency: item.settlement_currency,
+                size: Number(order.remaining_quantity ?? order.quantity ?? 0)
+            })));
+            updateActiveOrders();
+            updateStrategyStatus(Boolean(data.is_running));
+            document.getElementById('feedStatus').textContent =
+                `${readyCount}/${instruments.length} configured feeds ready / each instrument is gated independently.`;
+            document.getElementById('streamStatus').textContent = data.portfolio_error
+                ? `Portfolio risk blocked: ${data.portfolio_error}`
+                : `${instruments.length} instruments / public provider quotes and prints / local paper fills only`;
+
+            const acknowledgeRiskButton = document.getElementById('acknowledgeRiskButton');
+            acknowledgeRiskButton.style.display = data.circuit_breaker_active ? '' : 'none';
+            acknowledgeRiskButton.disabled = !isConnected || !data.circuit_breaker_active;
+            updateAllDisplays();
+            updateControls();
+            if (state.crossAssetMode) updateSelectedFeedLabels();
+        }
+
+        function handlePositionUpdate(data) {
+            state.valuationValid = data.equity != null && Number.isFinite(Number(data.equity));
+            if (data.position !== undefined) state.position = Number(data.position);
+            if (data.cash !== undefined) state.cash = Number(data.cash);
+            if (data.starting_cash !== undefined) state.startingCash = Number(data.starting_cash);
+            if (data.realized_pnl !== undefined) state.realizedPnl = Number(data.realized_pnl);
+            if (data.unrealized_pnl !== undefined) state.unrealizedPnl = Number(data.unrealized_pnl);
+            if (data.total_pnl !== undefined) state.totalPnl = Number(data.total_pnl);
+            if (data.equity !== undefined) state.equity = Number(data.equity);
+            if (data.total_fees !== undefined) state.totalFees = Number(data.total_fees);
+            if (data.total_traded_notional !== undefined) state.totalVolume = Number(data.total_traded_notional);
+            if (data.total_orders !== undefined) state.totalOrders = Number(data.total_orders);
+            if (data.total_orders_sent !== undefined) state.totalOrders = Number(data.total_orders_sent);
+            if (data.total_completed_orders !== undefined) state.completedOrders = Number(data.total_completed_orders);
+            if (data.total_fills !== undefined) state.totalFillEvents = Number(data.total_fills);
+            if (data.total_rejections !== undefined) state.rejections = Number(data.total_rejections);
+
+            // Update position history
+            const now = new Date().toLocaleTimeString();
+            state.positionHistory.push({ time: now, position: state.position });
+            if (state.positionHistory.length > 50) {
+                state.positionHistory.shift();
+            }
+
+            // Update P&L history
+            state.pnlHistory.push({ time: now, pnl: state.totalPnl });
+            if (state.pnlHistory.length > 50) {
+                state.pnlHistory.shift();
+            }
+
+            updateAllDisplays();
+        }
+
+        function handleFill(data) {
+            state.totalFillEvents += 1;
+            state.fills.push({
+                ...data,
+                timestamp: data.timestamp ? new Date(data.timestamp).toLocaleTimeString() : new Date().toLocaleTimeString()
+            });
+            if (state.fills.length > 20) {
+                state.fills.shift();
+            }
+
+            // Add to trades for attribution
+            state.trades.push({
+                ...data,
+                pnl: Number(data.realized_pnl || 0),
+                cumulative: Number(data.total_pnl ?? state.totalPnl)
+            });
+            if (state.trades.length > 20) {
+                state.trades.shift();
+            }
+
+            updateFillHistory();
+            updateTradeAttribution();
+        }
+
+        function formatMarketTime(value) {
+            if (value == null || value === '') return '--';
+            const date = typeof value === 'number'
+                ? new Date(value * 1000)
+                : (value ? new Date(value) : new Date());
+            return Number.isNaN(date.getTime()) ? '--' : date.toLocaleTimeString();
+        }
+
+        function normalizePublicTrade(data) {
+            const price = Number(data.price);
+            const quantity = Number(data.quantity ?? data.size);
+            const side = String(data.side || '').toLowerCase();
+            const instrument = crossAssetState?.instruments?.find(item => item.instrument_id === data.instrument_id);
+            const permitsNegativePrice = instrument?.asset_class === 'future';
+            if (!Number.isFinite(price) || (!permitsNegativePrice && price <= 0) || !Number.isFinite(quantity) || quantity <= 0
+                    || !['buy', 'sell'].includes(side)) return null;
+            return {
+                time: formatMarketTime(data.event_timestamp ?? data.timestamp),
+                side,
+                price,
+                quantity,
+            };
+        }
+
+        function handlePublicTrade(data) {
+            const trade = normalizePublicTrade(data);
+            if (!trade) return;
+            state.marketTrades.unshift(trade);
+            state.marketTrades = state.marketTrades.slice(0, 20);
+            state.totalMarketPrints += 1;
+            renderMarketTape();
+        }
+
+        function renderMarketTape() {
+            setText('marketPrintCount', (state.crossAssetMode ? state.marketTrades.length : state.totalMarketPrints).toLocaleString());
+            const tbody = document.getElementById('marketTapeBody');
+            const selected = crossAssetState?.instruments?.find(item => item.instrument_id === selectedInstrumentId);
+            const currency = selected?.quote_currency || '';
+            if (state.marketTrades.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-tertiary);padding:var(--spacing-md);">Waiting for public market prints</td></tr>';
+                return;
+            }
+            tbody.innerHTML = state.marketTrades.map(trade => `
+                <tr>
+                    <td>${trade.time}</td>
+                    <td><span class="market-side-${trade.side}">${trade.side.toUpperCase()}</span></td>
+                    <td>${state.crossAssetMode ? `${trade.price.toLocaleString(undefined, { maximumFractionDigits: 8 })} ${escapeHtml(currency)}` : `$${trade.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</td>
+                    <td>${trade.quantity.toLocaleString(undefined, { maximumFractionDigits: 8 })}</td>
+                </tr>
+            `).join('');
+        }
+
+        function normalizeBookLevel(level, allowNegative = false) {
+            const price = Number(Array.isArray(level) ? level[0] : level?.price);
+            const size = Number(Array.isArray(level) ? level[1] : (level?.size ?? level?.quantity));
+            return Number.isFinite(price) && (allowNegative || price > 0) && Number.isFinite(size) && size >= 0
+                ? { price, size }
+                : null;
+        }
+
+        function renderOrderBook(data, countUpdate = true, allowNegative = false) {
+            const bids = (Array.isArray(data.bids) ? data.bids : []).map(level => normalizeBookLevel(level, allowNegative)).filter(Boolean).slice(0, 5);
+            const asks = (Array.isArray(data.asks) ? data.asks : []).map(level => normalizeBookLevel(level, allowNegative)).filter(Boolean).slice(0, 5);
+            if (bids.length === 0 || asks.length === 0) return false;
+            const selected = crossAssetState?.instruments?.find(item => item.instrument_id === selectedInstrumentId);
+            const currency = selected?.quote_currency || '';
+
+            const rows = Array.from({ length: Math.max(bids.length, asks.length) }, (_, index) => {
+                const bid = bids[index];
+                const ask = asks[index];
+                const price = level => level
+                    ? (state.crossAssetMode
+                        ? `${level.price.toLocaleString(undefined, { maximumFractionDigits: 8 })} ${escapeHtml(currency)}`
+                        : '$' + level.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }))
+                    : '—';
+                const size = level => level ? level.size.toLocaleString(undefined, { maximumFractionDigits: 8 }) : '—';
+                return `<tr><td>${index + 1}</td><td class="market-side-buy">${price(bid)}</td><td>${size(bid)}</td><td class="market-side-sell">${price(ask)}</td><td>${size(ask)}</td></tr>`;
+            });
+            document.getElementById('orderBookBody').innerHTML = rows.join('');
+            state.hasBookSnapshot = true;
+            if (countUpdate) state.bookUpdates += 1;
+            if (state.crossAssetMode) updateSelectedFeedLabels();
+            else setText('bookUpdateStatus', state.bookReady
+                ? `Live / ${state.bookUpdates.toLocaleString()} depth updates`
+                : 'Cached snapshot / waiting for fresh feed status');
+            return true;
+        }
+
+        function handlePerformanceMetrics(data) {
+            state.sharpeRatio = Number(data.sharpe_ratio ?? state.sharpeRatio);
+            state.maxDrawdown = Number(data.max_drawdown ?? state.maxDrawdown);
+            state.fillRate = Number(data.fill_rate ?? state.fillRate);
+            state.avgSlippage = Number(data.avg_slippage_bps ?? data.avg_slippage ?? state.avgSlippage);
+
+            updatePerformanceMetrics();
+        }
+
+        function handleActiveOrders(data) {
+            state.activeOrders = (data.orders || []).map(order => ({
+                ...order,
+                size: Number(order.size ?? order.quantity ?? 0),
+                age: order.age || `${Number(order.age_seconds || 0).toFixed(1)}s`
+            }));
+            updateActiveOrders();
+        }
+
+        function handleCancelledOrders(data) {
+            const cancelledIds = new Set(Array.isArray(data.order_ids) ? data.order_ids : []);
+            if (cancelledIds.size === 0) return;
+            state.activeOrders = state.activeOrders.filter(order => !cancelledIds.has(order.order_id));
+            updateActiveOrders();
+        }
+
+        function handleStatus(data, updateAccount = true) {
+            updateFeedReadiness(data);
+            if (data.websocket) updateStreamStatus(data.websocket);
+            handleMarketUpdate(data);
+            if (data.is_running !== undefined) updateStrategyStatus(Boolean(data.is_running));
+            if (data.starting_cash !== undefined) state.startingCash = Number(data.starting_cash);
+            if (updateAccount && data.position !== undefined) handlePositionUpdate(data);
+            if (data.performance_metrics) handlePerformanceMetrics(data.performance_metrics);
+            if (data.risk_metrics && data.risk_metrics.current_drawdown !== undefined) {
+                state.maxDrawdown = Number(data.performance_metrics?.max_drawdown ?? data.risk_metrics.current_drawdown);
+            }
+            if (data.strategy_params) updateStrategyParameters(data.strategy_params, data.strategy_interval);
+            if (Array.isArray(data.active_orders)) handleActiveOrders({ orders: data.active_orders });
+            updateAllDisplays();
+        }
+
+        function resetDisplayHistory() {
+            state.fills = [];
+            state.trades = [];
+            state.positionHistory = [];
+            state.pnlHistory = [];
+            state.totalFillEvents = 0;
+            state.totalOrders = 0;
+            state.completedOrders = 0;
+            updateFillHistory();
+            updateTradeAttribution();
+            updateAllDisplays();
+        }
+
+        function handleMarketUpdate(data, countBookUpdate = true) {
+            const hasBook = renderOrderBook(data, countBookUpdate);
+            if (data.mid_price !== undefined && Number.isFinite(Number(data.mid_price))) {
+                state.midPrice = Number(data.mid_price);
+                setText('midPrice', '$' + state.midPrice.toFixed(2));
+            }
+            if (data.spread !== undefined && Number.isFinite(Number(data.spread))) {
+                state.spread = Number(data.spread);
+                setText('marketSpread', '$' + state.spread.toFixed(2));
+            }
+            if (hasBook) updateFeedReadiness({});
+        }
+
+        function updateFeedReadiness(data) {
+            if (state.crossAssetMode && data.market_data_ready === undefined
+                    && data.book_ready === undefined && data.trade_ready === undefined) {
+                updateControls();
+                return;
+            }
+            if (data.book_ready !== undefined) state.bookReady = Boolean(data.book_ready);
+            if (data.trade_ready !== undefined) state.tradeReady = Boolean(data.trade_ready);
+            if (data.market_data_ready !== undefined) state.marketDataReady = Boolean(data.market_data_ready);
+            else state.marketDataReady = state.bookReady && state.tradeReady;
+            const feedStatus = document.getElementById('feedStatus');
+            if (!isConnected) {
+                feedStatus.textContent = 'Local paper backend disconnected; displayed account values are stale.';
+                setText('bookUpdateStatus', state.hasBookSnapshot
+                    ? 'Backend disconnected / cached book is stale'
+                    : 'Backend disconnected / waiting for depth');
+            } else if (state.marketDataReady) {
+                feedStatus.textContent = 'Binance public depth and trade feeds are fresh.';
+                if (state.bookReady) {
+                    setText('bookUpdateStatus', `Live / ${state.bookUpdates.toLocaleString()} depth updates`);
+                }
+            } else {
+                const waiting = [];
+                if (!state.bookReady) waiting.push('depth');
+                if (!state.tradeReady) waiting.push('trades');
+                feedStatus.textContent = 'Waiting for fresh Binance ' + waiting.join(' and ') + ' feed data.';
+                if (state.bookReady) {
+                    setText('bookUpdateStatus', `Depth fresh / ${state.bookUpdates.toLocaleString()} updates`);
+                } else {
+                    setText('bookUpdateStatus', state.hasBookSnapshot
+                        ? 'Cached snapshot / depth feed is not fresh'
+                        : 'Waiting for depth');
+                }
+            }
+            updateControls();
+        }
+
+        function updateStreamStatus(stats) {
+            if (state.crossAssetMode) { updateSelectedFeedLabels(); return; }
+            const formatStream = (label, connected, updates, age) => {
+                const updateCount = Number.isFinite(Number(updates)) ? Number(updates).toLocaleString() : '0';
+                const ageSeconds = age === null || age === undefined ? NaN : Number(age);
+                const lastUpdate = Number.isFinite(ageSeconds) ? `${ageSeconds.toFixed(1)}s ago` : 'no updates yet';
+                const connection = connected ? 'connected' : 'disconnected';
+                return `${label}: ${connection} / ${updateCount} updates / ${lastUpdate}`;
+            };
+            if (stats && Object.keys(stats).length > 0) {
+                state.websocketStats = { ...stats };
+                state.depthAgeAnchorAt = Date.now();
+                state.tradeAgeAnchorAt = Date.now();
+            }
+            if (!isConnected) {
+                setText('streamStatus', 'Backend disconnected / feed status is stale');
+                return;
+            }
+            const current = state.websocketStats;
+            if (!current) {
+                setText('streamStatus', 'Depth stream: waiting / Trade stream: waiting');
+                return;
+            }
+            const ageSince = (key, anchor) => {
+                if (current[key] === null || current[key] === undefined) return null;
+                const elapsed = anchor === null ? 0 : Math.max(0, (Date.now() - anchor) / 1000);
+                return Math.max(0, Number(current[key]) + elapsed);
+            };
+            setText('streamStatus', `${formatStream('Depth', Boolean(current.depth_connected), current.orderbook_updates, ageSince('seconds_since_depth_update', state.depthAgeAnchorAt))} / ${formatStream('Trades', Boolean(current.trades_connected), current.trade_updates, ageSince('seconds_since_trade_update', state.tradeAgeAnchorAt))}`);
+        }
+
+        function noteStreamEvent(kind) {
+            if (!state.websocketStats) return;
+            const countKey = kind === 'depth' ? 'orderbook_updates' : 'trade_updates';
+            const ageKey = kind === 'depth' ? 'seconds_since_depth_update' : 'seconds_since_trade_update';
+            state.websocketStats[countKey] = (Number(state.websocketStats[countKey]) || 0) + 1;
+            state.websocketStats[ageKey] = 0;
+            if (kind === 'depth') state.depthAgeAnchorAt = Date.now();
+            else state.tradeAgeAnchorAt = Date.now();
+            updateStreamStatus();
+        }
+
+        function updateStrategyParameters(params, interval) {
+            if (params.risk_aversion !== undefined) strategyState.riskAversion = Number(params.risk_aversion);
+            if (params.order_size !== undefined) strategyState.orderSize = Number(params.order_size);
+            if (interval !== undefined) strategyState.interval = Number(interval);
+            refreshVariableInputs();
+        }
+
+
+        function updateAllDisplays() {
+            updateMetrics();
+            updatePositionChart();
+            updatePnlCharts();
+            updateImpactChart();
+            updatePerformanceMetrics();
+        }
+
+        function setText(id, value) {
+            const element = document.getElementById(id);
+            if (element) element.textContent = value;
+        }
+
+        function updateMetrics() {
+            const reporting = state.crossAssetMode ? state.reportingCurrency : 'USD';
+            const valid = state.valuationValid;
+            setText('summaryEquity', valid ? amount(state.equity, reporting) : 'Unavailable');
+            setText('summaryPnl', valid ? amount(state.totalPnl, reporting) : 'Unavailable');
+            setText('summaryOrders', String(state.activeOrders.length));
+            setText('summaryFeeds', !isConnected || waitingForFreshState ? 'Unknown / disconnected' : state.crossAssetMode
+                ? `${crossAssetState.instruments.filter(item => item.market_data_ready).length} / ${crossAssetState.instruments.length}`
+                : state.marketDataReady ? '1 / 1' : '0 / 1');
+            setText('totalPnl', valid ? amount(state.totalPnl, reporting) : 'Unavailable');
+            document.getElementById('totalPnl').className = state.totalPnl >= 0 ? 'card-value positive' : 'card-value negative';
+            const pnlPercent = valid && state.startingCash > 0 ? state.totalPnl / state.startingCash * 100 : null;
+            setText('pnlChange', pnlPercent == null ? 'A valid portfolio valuation is required'
+                : `${pnlPercent.toFixed(2)}% of initial equity / not cash-flow-adjusted return`);
+            setText('dailyVolume', state.crossAssetMode ? state.volumeByCurrencyText : amount(state.totalVolume, reporting));
+            setText('volumeChange', `${state.totalFillEvents} local fill events / native quote or settlement currencies`);
+            setText('feesPaid', valid ? amount(state.totalFees, reporting) : 'Unavailable');
+            setText('currentPosition', amount(state.position, state.crossAssetMode ? state.selectedPositionUnit : 'BTC', 8));
+            const selected = currentInstrument();
+            const positionValid = !state.crossAssetMode || selected?.valuation_valid;
+            setText('realizedPnl', amount(state.realizedPnl, state.selectedPositionCurrency, 4));
+            setText('unrealizedPnl', positionValid ? amount(state.unrealizedPnl, state.selectedPositionCurrency, 4) : 'Unavailable');
+            setText('rejectionCount', state.rejections);
+            if (!state.crossAssetMode) {
+                setText('selectedInstrumentTitle', 'BTC/USDT');
+                setText('selectedInstrumentMeta', 'Binance / BTC / local paper execution');
+                setText('selectedReadiness', isConnected ? document.getElementById('feedStatus').textContent : 'Waiting for the local paper backend');
+                setText('readinessDetails', document.getElementById('streamStatus').textContent);
+                setText('watchlistCount', 'BTC compatibility mode');
+            }
+        }
+
+
+        function updatePerformanceMetrics() {
+            setText('slippageMetricLabel', state.crossAssetMode ? '5-second fill markout' : 'Avg Slippage');
+            if (state.crossAssetMode) {
+                const analytics = crossAssetState?.analytics || {};
+                document.getElementById('sharpeRatio').textContent = analytics.sharpe_ratio == null ? 'Unavailable' : Number(analytics.sharpe_ratio).toFixed(2);
+                document.getElementById('sharpeChange').textContent = `${analytics.return_observations || 0} complete minute returns${analytics.annualized ? ' / annualized' : ' / unannualized'}`;
+                document.getElementById('maxDrawdown').textContent = analytics.max_drawdown == null ? 'Unavailable' : `${(Number(analytics.max_drawdown) * 100).toFixed(2)}%`;
+                document.getElementById('drawdownChange').textContent = 'Cash-flow-adjusted portfolio peak';
+                document.getElementById('fillRate').textContent = 'Unavailable';
+                document.getElementById('fillStats').textContent = 'Order completion metric unavailable';
+                const markout = analytics.markouts?.['5'];
+                document.getElementById('avgSlippage').textContent = markout?.mean_bps == null ? 'Unavailable' : `${Number(markout.mean_bps).toFixed(2)} bps`;
+                document.getElementById('slippageChange').textContent = `${markout?.count || 0} observed 5-second paper-fill markouts`;
+                return;
+            }
+            // Sharpe Ratio
+            document.getElementById('sharpeRatio').textContent = state.sharpeRatio.toFixed(2);
+
+            // Max Drawdown
+            document.getElementById('maxDrawdown').textContent = `$${state.maxDrawdown.toFixed(2)}`;
+
+            // Fill Rate
+            document.getElementById('fillRate').textContent = `${state.fillRate.toFixed(1)}%`;
+            document.getElementById('fillStats').textContent = `${state.completedOrders}/${state.totalOrders} orders completed`;
+
+            // Average Slippage
+            document.getElementById('avgSlippage').textContent = state.avgSlippage.toFixed(2);
+        }
+
+        function updatePositionChart() {
+            if (!positionChart || !chartVisible('positionChart')) return;
+            const unit = state.crossAssetMode ? state.selectedPositionUnit : 'BTC';
+            const limit = state.crossAssetMode ? crossAssetState?.risk_limits?.instruments?.[selectedInstrumentId]?.max_position_quantity : 0.1;
+            positionChart.data.labels = state.positionHistory.map(point => point.time);
+            positionChart.data.datasets[0].label = `Paper position (${unit})`;
+            positionChart.data.datasets[0].data = state.positionHistory.map(point => point.position);
+            positionChart.data.datasets[1].label = `Flat (0 ${unit})`;
+            positionChart.data.datasets[1].data = state.positionHistory.map(() => 0);
+            positionChart.data.datasets[2].label = limit == null ? 'Position limit unavailable' : `Configured long position limit (${limit} ${unit})`;
+            positionChart.data.datasets[2].hidden = limit == null;
+            positionChart.data.datasets[2].data = state.positionHistory.map(() => limit);
+            positionChart.update('none');
+        }
+
+
+        function updatePnlCharts() {
+            if (pnlBreakdownChart && chartVisible('pnlBreakdownChart')) {
+                pnlBreakdownChart.data.datasets[0].data = [state.realizedPnl,
+                    state.crossAssetMode && !currentInstrument()?.valuation_valid ? null : state.unrealizedPnl];
+                pnlBreakdownChart.update('none');
+            }
+            if (cumulativePnlChart && chartVisible('cumulativePnlChart')) {
+                cumulativePnlChart.data.labels = state.pnlHistory.map(point => point.time);
+                cumulativePnlChart.data.datasets[0].label = `Portfolio net P&L (${state.reportingCurrency})`;
+                cumulativePnlChart.data.datasets[0].data = state.pnlHistory.map(point => point.pnl);
+                cumulativePnlChart.update('none');
+            }
+        }
+
+
+        function updateImpactChart() {
+            document.getElementById('currentImpact').textContent = 'Unavailable. Not measured in this runtime.';
+        }
+
+        function updateTradeAttribution() {
+            const tbody = document.getElementById('tradeAttributionBody');
+
+            if (state.trades.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No trades yet</td></tr>';
+                refreshOverflowHints();
+                return;
+            }
+
+            let html = '';
+            state.trades.slice().reverse().forEach(trade => {
+                const pnlClass = trade.pnl >= 0 ? 'positive' : 'negative';
+                const instrument = crossAssetState?.instruments?.find(item => item.instrument_id === trade.instrument_id);
+                const symbol = instrument?.symbol || trade.instrument_id || 'BTC/USDT';
+                const unit = instrument?.quantity_unit || trade.quantity_unit || (state.crossAssetMode ? '' : 'BTC');
+                const currency = instrument?.quote_currency || instrument?.settlement_currency
+                    || trade.quote_currency || (state.crossAssetMode ? '' : 'USD');
+                const pnlCurrency = trade.realized_pnl_currency || instrument?.settlement_currency || currency;
+                const price = Number(trade.price);
+                const size = Number(trade.quantity || 0);
+                const realized = Number(trade.realized_pnl ?? trade.pnl ?? 0);
+                const totalPnlText = state.crossAssetMode
+                    ? (trade.total_pnl == null ? '—' : `${Number(trade.total_pnl).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${escapeHtml(crossAssetState?.reporting_currency || 'USD')}`)
+                    : `$${Number(trade.cumulative || 0).toFixed(2)}`;
+                html += `
+                    <tr>
+                        <td>${trade.timestamp || '--'}</td>
+                        <td>${escapeHtml(symbol)}</td>
+                        <td><span class="${trade.side === 'BUY' ? 'positive' : 'negative'}">${trade.side}</span></td>
+                        <td>${size.toLocaleString(undefined, { maximumFractionDigits: 8 })} ${escapeHtml(unit)}</td>
+                        <td>${Number.isFinite(price) ? price.toLocaleString(undefined, { maximumFractionDigits: 8 }) : '--'} ${escapeHtml(currency)}</td>
+                        <td class="${pnlClass}">${realized.toLocaleString(undefined, { maximumFractionDigits: 4 })} ${escapeHtml(pnlCurrency)}</td>
+                        <td>${totalPnlText}</td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html;
+            refreshOverflowHints();
+        }
+
+        function updateActiveOrders() {
+            const tbody = document.getElementById('activeOrdersBody');
+            const orders = state.crossAssetMode && document.getElementById('ordersScope').value !== 'all'
+                ? state.activeOrders.filter(order => order.instrument_id === selectedInstrumentId) : state.activeOrders;
+            document.getElementById('activeOrderCount').textContent = orders.length;
+            setText('summaryOrders', state.activeOrders.length);
+
+            if (orders.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-tertiary); padding: var(--spacing-md);">No active orders</td></tr>';
+                return;
+            }
+
+            let html = '';
+            orders.forEach(order => {
+                const instrument = crossAssetState?.instruments?.find(item => item.instrument_id === order.instrument_id);
+                const symbol = order.symbol || instrument?.symbol || order.instrument_id || 'BTC/USDT';
+                const currency = order.quote_currency || order.settlement_currency
+                    || instrument?.quote_currency || (state.crossAssetMode ? '' : 'USD');
+                const unit = order.quantity_unit || instrument?.quantity_unit || (state.crossAssetMode ? '' : 'BTC');
+                const price = Number(order.price);
+                const size = Number(order.size || 0);
+                const ageSeconds = Number.isFinite(Number(order.accepted_at))
+                    ? Math.max(0, Date.now() / 1000 - Number(order.accepted_at)) : NaN;
+                const priceText = Number.isFinite(price)
+                    ? (state.crossAssetMode
+                        ? `${price.toLocaleString(undefined, { maximumFractionDigits: 8 })} ${escapeHtml(currency)}`
+                        : `$${price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`)
+                    : '--';
+                html += `
+                    <tr>
+                        <td>${escapeHtml(symbol)}</td>
+                        <td><span class="${order.side === 'BUY' ? 'positive' : 'negative'}">${order.side}</span></td>
+                        <td>${priceText}</td>
+                        <td>${size.toLocaleString(undefined, { maximumFractionDigits: 8 })} ${escapeHtml(unit)}</td>
+                        <td>${order.age || (Number.isFinite(ageSeconds) ? `${ageSeconds.toFixed(1)}s` : '--')}</td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html;
+        }
+
+        function updateFillHistory() {
+            const tbody = document.getElementById('fillHistoryBody');
+
+            const fills = state.crossAssetMode && document.getElementById('fillsScope').value !== 'all'
+                ? state.fills.filter(fill => fill.instrument_id === selectedInstrumentId) : state.fills;
+            if (fills.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-tertiary); padding: var(--spacing-md);">No fills yet</td></tr>';
+                return;
+            }
+
+            let html = '';
+            fills.slice().reverse().slice(0, 20).forEach(fill => {
+                const instrument = crossAssetState?.instruments?.find(item => item.instrument_id === fill.instrument_id);
+                const unit = instrument?.quantity_unit || '';
+                const currency = instrument?.quote_currency || instrument?.settlement_currency || '';
+                const price = Number(fill.price);
+                const model = fill.estimated
+                    ? `Estimate / ${fill.execution_model || 'paper fill'}`
+                    : (fill.execution_model || 'Local paper');
+                html += `
+                    <tr>
+                        <td>${escapeHtml(String(fill.timestamp || '--'))}</td>
+                        <td>${escapeHtml(String(instrument?.symbol || fill.instrument_id || '--'))}</td>
+                        <td><span class="${fill.side === 'BUY' ? 'positive' : 'negative'}">${fill.side}</span></td>
+                        <td>${Number.isFinite(price) ? price.toLocaleString(undefined, { maximumFractionDigits: 8 }) : '--'} ${escapeHtml(currency)}</td>
+                        <td>${Number(fill.quantity || 0).toLocaleString(undefined, { maximumFractionDigits: 8 })} ${escapeHtml(unit)}</td>
+                        <td>${escapeHtml(model)}</td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html;
+        }
+
+        // ============================================================================
+        // STRATEGY CONTROLS
+        // ============================================================================
+        function initializeStrategyControls() {
+            const startButton = document.getElementById('startButton');
+            const stopButton = document.getElementById('stopButton');
+            const acknowledgeRiskButton = document.getElementById('acknowledgeRiskButton');
+            const resetButton = document.getElementById('resetButton');
+            const rollFutureButton = document.getElementById('rollFutureButton');
+            const applySplitButton = document.getElementById('applySplitButton');
+            const applyDividendButton = document.getElementById('applyDividendButton');
+            const postFinancingButton = document.getElementById('postFinancingButton');
+
+            startButton.addEventListener('click', () => sendCommand('start_strategy'));
+            stopButton.addEventListener('click', () => sendCommand('stop_strategy'));
+            document.getElementById('globalStopButton').addEventListener('click', () => sendCommand('stop_strategy'));
+            acknowledgeRiskButton.addEventListener('click', () => {
+                if (window.confirm('Acknowledge the risk halt? The paper account can resume only if maintenance margin and daily loss checks pass.')) {
+                    sendCommand('acknowledge_risk_circuit_breaker');
+                }
+            });
+            resetButton.addEventListener('click', () => {
+                if (window.confirm('Reset the local paper account, fills, and performance history?')) {
+                    sendCommand('reset_strategy');
+                }
+            });
+
+            rollFutureButton.addEventListener('click', () => {
+                const selected = crossAssetState?.instruments?.find(item => item.instrument_id === selectedInstrumentId);
+                if (!selected?.roll_to) return;
+                const replacement = crossAssetState.instruments.find(item => item.instrument_id === selected.roll_to);
+                const message = `Simulate a local paper roll from ${selected.symbol} to ${replacement?.symbol || selected.roll_to} at the current executable quotes? This creates no exchange orders.`;
+                if (window.confirm(message)) sendCommand('roll_future', {
+                    data: { old_instrument_id: selected.instrument_id, new_instrument_id: selected.roll_to }
+                });
+            });
+            applySplitButton.addEventListener('click', () => {
+                const selected = crossAssetState?.instruments?.find(item => item.instrument_id === selectedInstrumentId);
+                const ratio = Number(document.getElementById('splitRatio').value);
+                const actionId = document.getElementById('splitActionId').value.trim();
+                if (selected?.asset_class !== 'equity' || !Number.isFinite(ratio) || ratio <= 0 || !actionId) {
+                    showCommandOutcome('rejected', 'Choose an equity, enter a positive split ratio, and provide a stable corporate-action ID.');
+                    return;
+                }
+                if (window.confirm(`Apply ${ratio}:1 split ${actionId} to ${selected.symbol} in the local paper ledger?`)) {
+                    sendCommand('apply_equity_split', { data: {
+                        action_id: actionId, instrument_id: selected.instrument_id, ratio
+                    }});
+                }
+            });
+            applyDividendButton.addEventListener('click', () => {
+                const selected = crossAssetState?.instruments?.find(item => item.instrument_id === selectedInstrumentId);
+                const amountPerShare = Number(document.getElementById('dividendPerShare').value);
+                const eligibleQuantity = Number(document.getElementById('dividendEligibleQuantity').value);
+                const actionId = document.getElementById('dividendActionId').value.trim();
+                if (selected?.asset_class !== 'equity' || !Number.isFinite(amountPerShare) || amountPerShare < 0
+                        || !Number.isFinite(eligibleQuantity) || eligibleQuantity === 0 || !actionId) {
+                    showCommandOutcome('rejected', 'Choose an equity, enter the declared dividend and non-zero signed record-date shares, and provide a stable action ID.');
+                    return;
+                }
+                if (window.confirm(`Post ${amountPerShare} ${selected.quote_currency} per share for ${eligibleQuantity} eligible ${selected.symbol} shares in the local paper ledger?`)) {
+                    sendCommand('apply_equity_dividend', { data: {
+                        action_id: actionId, instrument_id: selected.instrument_id,
+                        amount_per_share: amountPerShare, eligible_quantity: eligibleQuantity
+                    }});
+                }
+            });
+            postFinancingButton.addEventListener('click', () => {
+                const selected = crossAssetState?.instruments?.find(item => item.instrument_id === selectedInstrumentId);
+                const amount = Number(document.getElementById('financingAmount').value);
+                const actionId = document.getElementById('financingActionId').value.trim();
+                const kind = document.getElementById('financingKind').value.trim() || 'fx_financing';
+                if (selected?.asset_class !== 'fx' || selected.fx_accounting_mode !== 'rolling'
+                        || !Number.isFinite(amount) || amount === 0 || !actionId) {
+                    showCommandOutcome('rejected', 'Choose rolling FX, enter a non-zero signed financing amount, and provide a stable adjustment ID.');
+                    return;
+                }
+                const currency = selected.settlement_currency || selected.quote_currency;
+                if (window.confirm(`Post ${amount} ${currency} (${kind}) to ${selected.symbol} in the local paper ledger?`)) {
+                    sendCommand('record_fx_financing', { data: {
+                        adjustment_id: actionId, instrument_id: selected.instrument_id,
+                        amount, currency, kind
+                    }});
+                }
+            });
+            document.getElementById('loadHistoryButton').addEventListener('click', requestPersistedHistory);
+            document.getElementById('historyRange').addEventListener('change', requestPersistedHistory);
+            document.getElementById('diagnosticsButton').addEventListener('click', () => sendCommand('get_diagnostics'));
+            document.getElementById('reviewActionsButton').addEventListener('click', () => sendCommand('get_account_actions'));
+            document.getElementById('importActionsButton').addEventListener('click', () => {
+                try {
+                    const actions = JSON.parse(document.getElementById('accountActionsJson').value);
+                    if (!Array.isArray(actions) || !actions.length || actions.length > 1000) throw new Error('Enter between 1 and 1,000 sourced actions.');
+                    if (window.confirm(`Schedule ${actions.length} sourced local accounting actions? Review their effective times and sources first.`)) {
+                        sendCommand('import_account_actions', { data: { actions } });
+                    }
+                } catch (error) { setText('accountActionsResult', error.message); }
+            });
+            document.getElementById('previewMigrationButton').addEventListener('click', () => {
+                try {
+                    const config = JSON.parse(document.getElementById('migrationConfigJson').value);
+                    sendCommand('preview_migration', { data: { config } });
+                } catch (error) { setText('migrationPreviewResult', error.message); }
+            });
+            document.getElementById('settleFutureButton').addEventListener('click', () => {
+                const selected = crossAssetState?.instruments?.find(item => item.instrument_id === selectedInstrumentId);
+                const settlementPrice = Number(document.getElementById('settlementPrice').value);
+                const actionId = document.getElementById('settlementActionId').value.trim();
+                const source = document.getElementById('adjustmentSource').value.trim();
+                if (selected?.asset_class !== 'future' || !Number.isFinite(settlementPrice) || !actionId || !source) {
+                    showCommandOutcome('rejected', 'Choose a futures contract and enter its sourced settlement price, action ID, and source reference.');
+                    return;
+                }
+                if (window.confirm(`Post sourced settlement ${settlementPrice} for ${selected.symbol} to the local paper ledger?`)) {
+                    sendCommand('schedule_account_action', { data: {
+                        action_id: actionId, action_type: 'settlement', instrument_id: selected.instrument_id,
+                        source, effective_ts: Date.now() / 1000, payload: { settlement_price: settlementPrice }
+                    }});
+                }
+            });
+            updateControls();
+        }
+
+        function sendCommand(type, extra = {}) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                showCommandOutcome('rejected', 'The local paper backend is disconnected. Reconnecting; no command was sent.');
+                return;
+            }
+            if (state.crossAssetMode) {
+                if (!applicationAccountId) {
+                    showCommandOutcome('rejected', 'Waiting for the authenticated account state; no command was sent.');
+                    return;
+                }
+                let payload = extra.data || extra.params || {};
+                const adjustmentTypes = {
+                    apply_equity_split: 'split', apply_equity_dividend: 'dividend', record_fx_financing: 'financing'
+                };
+                if (adjustmentTypes[type]) {
+                    const source = document.getElementById('adjustmentSource').value.trim();
+                    if (!source) {
+                        showCommandOutcome('rejected', 'Enter the source reference for this account adjustment.');
+                        return;
+                    }
+                    const { action_id, adjustment_id, instrument_id, ...values } = payload;
+                    payload = { action_id: action_id || adjustment_id, action_type: adjustmentTypes[type],
+                        instrument_id, source, effective_ts: Date.now() / 1000, payload: values };
+                    type = 'schedule_account_action';
+                }
+                const requestId = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${++requestSequence}`;
+                trackCommand(requestId, type, payload, extra.uiQuiet === true);
+                ws.send(JSON.stringify({ type: 'paper_command', data: {
+                    protocol_version: 1, request_id: requestId, account_id: applicationAccountId,
+                    expected_revision: applicationRevision, command: type, payload
+                }}));
+            } else {
+                const requestId = `legacy-${++requestSequence}`;
+                trackCommand(requestId, type, extra.params || extra.data || {}, extra.uiQuiet === true);
+                ws.send(JSON.stringify({ type, ...extra }));
+            }
+        }
+
+        function updateControls() {
+            const connected = isConnected && ws && ws.readyState === WebSocket.OPEN;
+            refreshVariableInputs();
+            document.getElementById('startButton').disabled = !connected || strategyState.running || !state.marketDataReady;
+            document.getElementById('stopButton').disabled = !connected || !strategyState.running;
+            // Manual quotes can remain while the strategy is stopped.
+            document.getElementById('globalStopButton').disabled = !connected;
+            const acknowledgeRiskButton = document.getElementById('acknowledgeRiskButton');
+            acknowledgeRiskButton.disabled = !connected || !crossAssetState?.circuit_breaker_active;
+            document.getElementById('resetButton').disabled = !connected || state.crossAssetMode;
+            document.getElementById('riskAversionSlider').disabled = !connected || state.crossAssetMode;
+            document.getElementById('orderSizeSlider').disabled = !connected || state.crossAssetMode;
+            document.getElementById('intervalSlider').disabled = !connected || state.crossAssetMode;
+            document.getElementById('spreadBpsSlider').disabled = !connected || !state.crossAssetMode;
+            document.getElementById('inventorySkewSlider').disabled = !connected || !state.crossAssetMode;
+            Object.keys(variableFields).forEach(prefix => {
+                document.getElementById(prefix + 'Input').disabled = document.getElementById(prefix + 'Slider').disabled;
+            });
+            const selected = crossAssetState?.instruments?.find(item => item.instrument_id === selectedInstrumentId);
+            document.getElementById('applySplitButton').disabled = !connected || !state.crossAssetMode || selected?.asset_class !== 'equity';
+            document.getElementById('applyDividendButton').disabled = !connected || !state.crossAssetMode || selected?.asset_class !== 'equity';
+            document.getElementById('postFinancingButton').disabled = !connected || !state.crossAssetMode
+                || selected?.asset_class !== 'fx' || selected?.fx_accounting_mode !== 'rolling';
+            document.getElementById('settleFutureButton').disabled = !connected || selected?.asset_class !== 'future';
+            ['loadHistoryButton', 'diagnosticsButton', 'importActionsButton', 'reviewActionsButton', 'previewMigrationButton'].forEach(id => {
+                document.getElementById(id).disabled = !connected || !state.crossAssetMode || !applicationAccountId;
+            });
+        }
+
+        function sendParameterUpdate(params) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                showCommandOutcome('rejected', 'The local paper backend is disconnected; no variable changes were sent.');
+                return;
+            }
+
+            const scopedParams = state.crossAssetMode
+                ? { ...params, instrument_id: selectedInstrumentId }
+                : params;
+            sendCommand('update_params', { params: scopedParams });
+        }
+
+        function downloadJson(name, data) {
+            const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+            const anchor = document.createElement('a');
+            anchor.href = url; anchor.download = name; anchor.click();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+
+        function requestPersistedHistory(options = {}) {
+            lastHistoryFetchAt = Date.now();
+            const seconds = Number(document.getElementById('historyRange').value);
+            sendCommand('get_history', { uiQuiet: options.quiet === true,
+                data: { start: seconds ? Date.now() / 1000 - seconds : null, limit: 1000 } });
+        }
+
+
+        function renderPersistedHistory(data) {
+            persistedHistoryRows = (Array.isArray(data) ? data : (data?.history || data?.rows || []))
+                .map(row => ({ ...(row.payload || row), timestamp: row.timestamp ?? row.payload?.timestamp }))
+                .filter(row => Number.isFinite(Number(row.timestamp)))
+                .sort((left, right) => Number(left.timestamp) - Number(right.timestamp));
+            applyPersistedHistory();
+            const count = persistedHistoryRows.length;
+            const coverage = count ? `${new Date(Number(persistedHistoryRows[0].timestamp) * 1000).toLocaleString()} to ${new Date(Number(persistedHistoryRows[count - 1].timestamp) * 1000).toLocaleString()}` : 'No observations in this range';
+            setText('historyStatus', `${count} saved observations / ${coverage}. Request limit: 1,000${count >= 1000 ? '; result may be truncated. Select a narrower range.' : '; returned coverage only, not a guarantee of complete history.'} Invalid valuation intervals appear as gaps.`);
+            updatePositionChart();
+            updatePnlCharts();
+        }
+
+
+        function applyPersistedHistory() {
+            state.pnlHistory = persistedHistoryRows.map(row => ({
+                time: new Date(Number(row.timestamp) * 1000).toLocaleString(),
+                pnl: row.valuation_valid === false || row.total_pnl == null ? null : Number(row.total_pnl)
+            }));
+            state.positionHistory = persistedHistoryRows.map(row => ({
+                time: new Date(Number(row.timestamp) * 1000).toLocaleString(),
+                position: row.positions?.[selectedInstrumentId] == null ? null : Number(row.positions[selectedInstrumentId])
+            }));
+        }
+
+
+        function updateStrategyStatus(running) {
+            strategyState.running = running;
+            const statusDot = document.getElementById('strategyStatusDot');
+            const statusText = document.getElementById('strategyStatusText');
+
+            if (running) {
+                statusDot.className = 'status-dot-control running';
+                statusText.textContent = 'Running';
+            } else {
+                statusDot.className = 'status-dot-control stopped';
+                statusText.textContent = 'Stopped';
+            }
+            updateControls();
+        }
+
+        function updateConnectionStatus(connected) {
+            isConnected = connected;
+            if (!connected && document.getElementById('controlMessage').dataset.outcome === 'connected') {
+                showCommandOutcome('disconnected', 'The local paper backend is disconnected. Displayed values are last received; reconnecting.');
+            }
+            const statusDot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+
+            if (connected) {
+                statusDot.className = 'status-dot connected';
+                statusText.textContent = 'Connected to local paper backend';
+            } else {
+                statusDot.className = 'status-dot';
+                statusText.textContent = 'Paper backend disconnected';
+            }
+            updateFeedReadiness({});
+            updateStreamStatus({});
+            if (state.crossAssetMode && crossAssetState) {
+                renderWatchlist();
+                renderInstrumentDetails(currentInstrument(), crossAssetState);
+                updateMetrics();
+                if (!connected) setText('strategyStatusText', `Last known: ${strategyState.running ? 'running' : 'stopped'}`);
+            }
+            updateControls();
+        }
+
+        // ============================================================================
+        // INITIALIZATION
+        // ============================================================================
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeStrategyControls();
+            initializeWorkbench();
+            connect();
+            setInterval(() => updateStreamStatus(), 1000);
+        });
+    </script>
+</body>
+</html>

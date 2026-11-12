@@ -1,0 +1,84 @@
+[
+  {
+    "action_id": "ILLUSTRATIVE-AAPL-borrow-terms-20261101",
+    "action_type": "borrow_terms",
+    "instrument_id": "NASDAQ:AAPL",
+    "source": "ILLUSTRATIVE_PAPER_INPUT_REPLACE_WITH_SOURCED_TERMS",
+    "effective_ts": 1793491200,
+    "payload": {
+      "annual_rate": 0.1,
+      "borrow_limit": 10,
+      "effective_to": 1796083200,
+      "day_count": "ACT/365F"
+    }
+  },
+  {
+    "action_id": "ILLUSTRATIVE-AAPL-borrow-reconciliation-20261102",
+    "action_type": "borrow_charge",
+    "instrument_id": "NASDAQ:AAPL",
+    "source": "ILLUSTRATIVE_PAPER_INPUT_REPLACE_WITH_SOURCED_CHARGE_AND_ESTIMATE",
+    "effective_ts": 1793577600,
+    "payload": {
+      "actual_amount": 2.5,
+      "estimated_amount": 2.0,
+      "currency": "USD",
+      "interval_start": 1793491200,
+      "interval_end": 1793577600
+    }
+  },
+  {
+    "action_id": "ILLUSTRATIVE-EURUSD-financing-20261102",
+    "action_type": "financing",
+    "instrument_id": "OANDA:EUR_USD",
+    "source": "ILLUSTRATIVE_PAPER_INPUT_REPLACE_WITH_SOURCED_FINANCING",
+    "effective_ts": 1793577600,
+    "payload": {
+      "amount": -1.5,
+      "currency": "USD"
+    }
+  },
+  {
+    "action_id": "ILLUSTRATIVE-AAPL-dividend-20261102",
+    "action_type": "dividend",
+    "instrument_id": "NASDAQ:AAPL",
+    "source": "ILLUSTRATIVE_PAPER_INPUT_REPLACE_WITH_DECLARATION_AND_RECORD_DATE_HOLDINGS",
+    "effective_ts": 1793628000,
+    "payload": {
+      "amount_per_share": 0.5,
+      "eligible_quantity": 2
+    }
+  },
+  {
+    "action_id": "ILLUSTRATIVE-ESZ6-settlement-20261102",
+    "action_type": "settlement",
+    "instrument_id": "CME:ESZ6",
+    "source": "ILLUSTRATIVE_PAPER_INPUT_REPLACE_WITH_OFFICIAL_SETTLEMENT",
+    "effective_ts": 1793653200,
+    "payload": {
+      "settlement_price": 5000
+    }
+  },
+  {
+    "action_id": "ILLUSTRATIVE-AAPL-close-20261102",
+    "action_type": "valuation_mark",
+    "instrument_id": "NASDAQ:AAPL",
+    "source": "ILLUSTRATIVE_PAPER_INPUT_REPLACE_WITH_OFFICIAL_CLOSE_AND_OPENING_CALENDAR",
+    "effective_ts": 1793653200,
+    "payload": {
+      "price": 200,
+      "basis": "official_close",
+      "next_open_ts": 1793716200,
+      "stress_fraction": 0.1
+    }
+  },
+  {
+    "action_id": "ILLUSTRATIVE-AAPL-split-20261103",
+    "action_type": "split",
+    "instrument_id": "NASDAQ:AAPL",
+    "source": "ILLUSTRATIVE_PAPER_INPUT_REPLACE_WITH_CORPORATE_ACTION_NOTICE",
+    "effective_ts": 1793714400,
+    "payload": {
+      "ratio": 2
+    }
+  }
+]
